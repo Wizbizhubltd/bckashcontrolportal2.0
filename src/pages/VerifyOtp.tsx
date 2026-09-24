@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AlertCircleIcon, LoaderIcon, MailCheckIcon } from 'lucide-react';
-import { Logo } from '../components/Logo';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { ArrowLeftIcon, MailCheckIcon } from 'lucide-react';
+import { AuthLayout } from '../components/auth/AuthLayout';
+import { AuthAlert, AuthHeader, AuthSubmitButton } from '../components/auth/AuthFields';
 import { useAuth } from '../context/AuthContext';
 
 export function VerifyOtp() {
@@ -12,8 +13,7 @@ export function VerifyOtp() {
   const [loading, setLoading] = useState(false);
 
   if (!pendingChallengeToken) {
-    navigate('/login', { replace: true });
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
   const handleSubmit = async (event: FormEvent) => {
@@ -32,65 +32,65 @@ export function VerifyOtp() {
   };
 
   return (
-    <div className="min-h-screen flex w-full font-body items-center justify-center bg-gray-50 p-8">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <div className="mb-8 flex justify-center">
-          <Logo width={140} height={46} />
-        </div>
-
-        <div className="flex justify-center mb-4">
-          <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-            <MailCheckIcon size={22} />
-          </div>
-        </div>
-
-        <h2 className="text-2xl font-heading font-bold text-primary mb-2 text-center">Verify Your Identity</h2>
-        <p className="text-gray-500 mb-8 text-center text-sm">
-          Enter the 6-digit code sent to your email{pendingEmail ? <> and phone on file for <span className="font-medium text-gray-700">{pendingEmail}</span></> : ' and phone on file'}
-        </p>
-
-        {error && (
-          <div className="flex items-center gap-2 p-3 mb-5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-            <AlertCircleIcon size={16} className="flex-shrink-0" />
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-          <div>
-            <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
-              Verification Code
-            </label>
-            <input
-              id="code"
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all tracking-[0.5em] text-center text-lg"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || code.length !== 6}
-            className="w-full bg-accent hover:bg-[#e64a19] text-white font-heading font-bold py-3 rounded-lg transition-colors shadow-md mt-4 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {loading ? (
+    <AuthLayout>
+      <AuthHeader
+        icon={MailCheckIcon}
+        title="Verify your identity"
+        subtitle={
+          <>
+            Enter the 6-digit code sent to your email
+            {pendingEmail ? (
               <>
-                <LoaderIcon size={18} className="animate-spin" />
-                Verifying...
+                {' '}and phone on file for <span className="font-medium text-gray-700">{pendingEmail}</span>.
               </>
             ) : (
-              'Verify & Continue'
+              ' and phone on file.'
             )}
-          </button>
-        </form>
+          </>
+        }
+      />
 
-        <p className="text-xs text-gray-400 text-center mt-6">The code expires in 5 minutes. Didn't get it? Go back and sign in again to request a new one.</p>
-      </div>
-    </div>
+      {error && <AuthAlert>{error}</AuthAlert>}
+
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <div>
+          <label htmlFor="code" className="mb-1.5 block text-sm font-medium text-gray-700">
+            Verification code
+          </label>
+          <input
+            id="code"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            placeholder="000000"
+            value={code}
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+            className="h-14 w-full rounded-xl border border-gray-200 bg-gray-50/70 text-center font-heading text-xl tracking-[0.5em] text-gray-900 placeholder:text-gray-300 outline-none transition-all hover:border-gray-300 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+            autoFocus
+            required
+          />
+        </div>
+
+        <div className="pt-2">
+          <AuthSubmitButton loading={loading} disabled={code.length !== 6} loadingLabel="Verifying...">
+            Verify &amp; continue
+          </AuthSubmitButton>
+        </div>
+      </form>
+
+      <p className="mt-6 text-center text-xs text-gray-400">
+        The code expires in 5 minutes. Didn't get it? Go back and sign in again to request a new one.
+      </p>
+
+      <Link
+        to="/login"
+        state={{ email: pendingEmail ?? '' }}
+        className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-800"
+      >
+        <ArrowLeftIcon size={16} />
+        Back to sign in
+      </Link>
+    </AuthLayout>
   );
 }

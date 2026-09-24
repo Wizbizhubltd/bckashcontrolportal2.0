@@ -62,4 +62,26 @@ export const authApi = {
       throw toFriendlyError(error);
     }
   },
+
+  /**
+   * Sends a reset code to the account's email and phone. The backend answers the same way for
+   * unknown emails (the returned challenge just never verifies), so success here doesn't
+   * confirm the account exists.
+   */
+  async forgotPassword(email: string): Promise<{ challengeToken: string }> {
+    try {
+      const response = await authClient.post<{ challengeToken: string }>('/auth/password/forgot', { email });
+      return response.data;
+    } catch (error) {
+      throw toFriendlyError(error);
+    }
+  },
+
+  async resetPassword(challengeToken: string, code: string, newPassword: string): Promise<void> {
+    try {
+      await authClient.post('/auth/password/reset', { challengeToken, code, newPassword });
+    } catch (error) {
+      throw toFriendlyError(error);
+    }
+  },
 };

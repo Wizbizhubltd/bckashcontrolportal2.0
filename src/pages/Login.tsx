@@ -1,13 +1,22 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AlertCircleIcon, LoaderIcon, ShieldCheckIcon } from 'lucide-react';
-import { Logo } from '../components/Logo';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowRightIcon, MailIcon, ShieldCheckIcon } from 'lucide-react';
+import { AuthLayout } from '../components/auth/AuthLayout';
+import { AuthAlert, AuthHeader, AuthPasswordInput, AuthSubmitButton, AuthTextInput } from '../components/auth/AuthFields';
 import { useAuth } from '../context/AuthContext';
+
+interface LoginLocationState {
+  email?: string;
+  passwordReset?: boolean;
+}
 
 export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  const locationState = (location.state ?? {}) as LoginLocationState;
+
+  const [email, setEmail] = useState(locationState.email ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,75 +37,63 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex w-full font-body items-center justify-center bg-gray-50 p-8">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <div className="mb-8 flex justify-center">
-          <Logo width={140} height={46} />
+    <AuthLayout>
+      <AuthHeader title="Welcome back" subtitle="Sign in to the BCKash Control Portal to continue." />
+
+      {locationState.passwordReset && !error && (
+        <AuthAlert tone="success">Your password has been updated. Sign in with your new password.</AuthAlert>
+      )}
+      {error && <AuthAlert>{error}</AuthAlert>}
+
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <AuthTextInput
+          id="email"
+          label="Email address"
+          icon={MailIcon}
+          type="email"
+          placeholder="name@company.com"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          autoComplete="email"
+          autoFocus={!email}
+          required
+        />
+
+        <AuthPasswordInput
+          id="password"
+          label="Password"
+          placeholder="Enter your password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          autoComplete="current-password"
+          autoFocus={!!email}
+          required
+          labelAction={
+            <Link
+              to="/forgot-password"
+              state={{ email }}
+              className="text-sm font-medium text-primary transition-colors hover:text-primary-500"
+            >
+              Forgot password?
+            </Link>
+          }
+        />
+
+        <div className="pt-2">
+          <AuthSubmitButton loading={loading} disabled={!email || !password} loadingLabel="Signing in...">
+            Sign in
+            <ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-0.5" />
+          </AuthSubmitButton>
         </div>
+      </form>
 
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-heading font-bold tracking-wide uppercase">
-            <ShieldCheckIcon size={12} />
-            Control Portal
-          </span>
-        </div>
-        <h2 className="text-2xl font-heading font-bold text-primary mb-2 text-center">Sign In</h2>
-        <p className="text-gray-500 mb-8 text-center text-sm">Restricted to authorized super admin staff</p>
-
-        {error && (
-          <div className="flex items-center gap-2 p-3 mb-5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-            <AlertCircleIcon size={16} className="flex-shrink-0" />
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-              autoComplete="email"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-              autoComplete="current-password"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || !email || !password}
-            className="w-full bg-accent hover:bg-[#e64a19] text-white font-heading font-bold py-3 rounded-lg transition-colors shadow-md mt-4 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <LoaderIcon size={18} className="animate-spin" />
-                Signing In...
-              </>
-            ) : (
-              'Sign In'
-            )}
-          </button>
-        </form>
+      <div className="mt-8 flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
+        <ShieldCheckIcon size={18} className="mt-0.5 flex-shrink-0 text-primary" />
+        <p className="text-xs leading-relaxed text-gray-500">
+          <span className="font-medium text-gray-700">Protected by two-step verification.</span> After signing in, you'll
+          receive a one-time code on the email and phone linked to your account.
+        </p>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

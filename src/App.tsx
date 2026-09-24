@@ -5,6 +5,7 @@ import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
 import { VerifyOtp } from './pages/VerifyOtp';
+import { ForgotPassword } from './pages/ForgotPassword';
 import { Dashboard } from './pages/Dashboard';
 import { OfficesListPage } from './pages/offices/OfficesListPage';
 import { OfficeFormPage } from './pages/offices/OfficeFormPage';
@@ -38,6 +39,7 @@ export function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/verify-otp" element={<VerifyOtp />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<Layout />}>
