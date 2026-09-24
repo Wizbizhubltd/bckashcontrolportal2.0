@@ -9,6 +9,9 @@ import { ForgotPassword } from './pages/ForgotPassword';
 import { Dashboard } from './pages/Dashboard';
 import { OfficesListPage } from './pages/offices/OfficesListPage';
 import { OfficeFormPage } from './pages/offices/OfficeFormPage';
+import { OfficeDetailPage } from './pages/offices/OfficeDetailPage';
+import { ZonesPage } from './pages/zones/ZonesPage';
+import { CitiesPage } from './pages/cities/CitiesPage';
 import { StaffListPage } from './pages/staff/StaffListPage';
 import { StaffFormPage } from './pages/staff/StaffFormPage';
 import { StaffDetailPage } from './pages/staff/StaffDetailPage';
@@ -48,8 +51,11 @@ export function App() {
               <Route path="offices">
                 <Route index element={<OfficesListPage />} />
                 <Route path="new" element={<OfficeFormPage />} />
+                <Route path=":id" element={<OfficeDetailPage />} />
                 <Route path=":id/edit" element={<OfficeFormPage />} />
               </Route>
+              <Route path="zones" element={<ZonesPage />} />
+              <Route path="cities" element={<CitiesPage />} />
 
               <Route path="staff">
                 <Route index element={<StaffListPage />} />

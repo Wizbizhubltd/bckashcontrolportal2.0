@@ -1,16 +1,28 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon, MailCheckIcon } from 'lucide-react';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { AuthAlert, AuthHeader, AuthSubmitButton } from '../components/auth/AuthFields';
 import { useAuth } from '../context/AuthContext';
 
+// Matches the server's resend cooldown; the server enforces it regardless of this timer.
+const RESEND_COOLDOWN_SECONDS = 60;
+
 export function VerifyOtp() {
-  const { verifyOtp, pendingChallengeToken, pendingEmail } = useAuth();
+  const { verifyOtp, resendOtp, pendingChallengeToken, pendingEmail } = useAuth();
   const navigate = useNavigate();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_SECONDS);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((seconds) => seconds - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   if (!pendingChallengeToken) {
     return <Navigate to="/login" replace />;
@@ -19,6 +31,7 @@ export function VerifyOtp() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
+    setNotice('');
     setLoading(true);
 
     try {
@@ -28,6 +41,23 @@ export function VerifyOtp() {
       setError(submitError instanceof Error ? submitError.message : 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setError('');
+    setNotice('');
+    setResending(true);
+
+    try {
+      await resendOtp();
+      setCode('');
+      setNotice('A new code has been sent. Codes sent earlier will no longer work.');
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch (resendError) {
+      setError(resendError instanceof Error ? resendError.message : 'Could not resend the code. Please try again.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -51,6 +81,7 @@ export function VerifyOtp() {
       />
 
       {error && <AuthAlert>{error}</AuthAlert>}
+      {notice && <AuthAlert tone="success">{notice}</AuthAlert>}
 
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <div>
@@ -79,9 +110,22 @@ export function VerifyOtp() {
         </div>
       </form>
 
-      <p className="mt-6 text-center text-xs text-gray-400">
-        The code expires in 5 minutes. Didn't get it? Go back and sign in again to request a new one.
+      <p className="mt-6 text-center text-sm text-gray-500">
+        Didn't get the code?{' '}
+        {resendCooldown > 0 ? (
+          <span className="text-gray-400">Resend in {resendCooldown}s</span>
+        ) : (
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resending}
+            className="font-medium text-primary transition-colors hover:text-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {resending ? 'Sending...' : 'Resend code'}
+          </button>
+        )}
       </p>
+      <p className="mt-2 text-center text-xs text-gray-400">The code expires in 5 minutes.</p>
 
       <Link
         to="/login"

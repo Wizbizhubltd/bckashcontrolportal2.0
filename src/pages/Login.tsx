@@ -4,6 +4,14 @@ import { ArrowRightIcon, MailIcon, ShieldCheckIcon } from 'lucide-react';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { AuthAlert, AuthHeader, AuthPasswordInput, AuthSubmitButton, AuthTextInput } from '../components/auth/AuthFields';
 import { useAuth } from '../context/AuthContext';
+import { SIGNED_OUT_REASON_KEY } from '../config/storageKeys';
+
+// Read once and cleared, so the notice shows on the redirect to this page but not on later visits.
+function takeSignedOutReason(): string | null {
+  const reason = sessionStorage.getItem(SIGNED_OUT_REASON_KEY);
+  sessionStorage.removeItem(SIGNED_OUT_REASON_KEY);
+  return reason;
+}
 
 interface LoginLocationState {
   email?: string;
@@ -20,6 +28,7 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [signedOutReason] = useState(takeSignedOutReason);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -43,6 +52,7 @@ export function Login() {
       {locationState.passwordReset && !error && (
         <AuthAlert tone="success">Your password has been updated. Sign in with your new password.</AuthAlert>
       )}
+      {signedOutReason && !error && <AuthAlert>{signedOutReason}</AuthAlert>}
       {error && <AuthAlert>{error}</AuthAlert>}
 
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>

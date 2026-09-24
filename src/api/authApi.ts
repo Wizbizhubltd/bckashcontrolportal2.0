@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { env } from '../config/env';
+import { getDeviceId } from '../config/deviceId';
 
 const authClient = axios.create({
   baseURL: env.apiBaseUrl,
@@ -23,6 +24,7 @@ export interface UserData {
   phoneNumber: string | null;
   user_class: string | null;
   user_type: string | null;
+  mustChangePassword: boolean;
 }
 
 export interface OtpVerifyResponse {
@@ -56,7 +58,17 @@ export const authApi = {
 
   async verifyOtp(challengeToken: string, code: string): Promise<OtpVerifyResponse> {
     try {
-      const response = await authClient.post<OtpVerifyResponse>('/auth/login/otp/verify', { challengeToken, code });
+      const response = await authClient.post<OtpVerifyResponse>('/auth/login/otp/verify', { challengeToken, code, deviceId: getDeviceId() });
+      return response.data;
+    } catch (error) {
+      throw toFriendlyError(error);
+    }
+  },
+
+  /** Sends a fresh login code and invalidates the old one — the returned token replaces the pending challenge. */
+  async resendOtp(challengeToken: string): Promise<OtpChallengeResponse> {
+    try {
+      const response = await authClient.post<OtpChallengeResponse>('/auth/login/otp/resend', { challengeToken });
       return response.data;
     } catch (error) {
       throw toFriendlyError(error);

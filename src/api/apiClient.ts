@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { env } from '../config/env';
-import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_DATA_KEY } from '../config/storageKeys';
+import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, SIGNED_OUT_REASON_KEY, USER_DATA_KEY } from '../config/storageKeys';
 
 const apiClient = axios.create({
   baseURL: env.apiBaseUrl,
@@ -36,6 +36,11 @@ apiClient.interceptors.response.use(
     // and never hits this interceptor) — bounce straight back to the login screen instead of
     // leaving the operator staring at a page full of failed-request toasts.
     if (normalized.status === 401 && window.location.pathname !== '/login') {
+      // Only one device can be signed in at a time — tell the user why they were signed out.
+      const reason = (normalized.responseData as { reason?: string } | undefined)?.reason;
+      if (reason === 'session_replaced') {
+        sessionStorage.setItem(SIGNED_OUT_REASON_KEY, normalized.message);
+      }
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
       localStorage.removeItem(USER_DATA_KEY);

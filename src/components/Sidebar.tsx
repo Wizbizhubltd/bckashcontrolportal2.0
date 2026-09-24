@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboardIcon,
   Building2Icon,
+  MapIcon,
+  MapPinIcon,
   UsersIcon,
   ShieldCheckIcon,
   SlidersIcon,
@@ -15,6 +17,8 @@ import { useAuth } from '../context/AuthContext';
 const NAV_LINKS = [
   { to: '/', end: true, label: 'Dashboard', icon: LayoutDashboardIcon },
   { to: '/offices', label: 'Office Directory', icon: Building2Icon },
+  { to: '/zones', label: 'Zones', icon: MapIcon },
+  { to: '/cities', label: 'Cities', icon: MapPinIcon },
   { to: '/staff', label: 'Staff Directory', icon: UsersIcon },
   { to: '/super-admins', label: 'Super Admins', icon: ShieldCheckIcon },
   { to: '/settings', label: 'Rules & Settings', icon: SlidersIcon },

@@ -15,6 +15,7 @@ interface AuthContextType {
   pendingEmail: string | null;
   login: (email: string, password: string) => Promise<void>;
   verifyOtp: (code: string) => Promise<void>;
+  resendOtp: () => Promise<void>;
   logout: () => void;
 }
 
@@ -67,6 +68,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPendingEmail(null);
   };
 
+  const resendOtp = async (): Promise<void> => {
+    if (!pendingChallengeToken) {
+      throw new Error('Login session expired — please sign in again.');
+    }
+
+    const { challengeToken } = await authApi.resendOtp(pendingChallengeToken);
+    sessionStorage.setItem(PENDING_CHALLENGE_KEY, challengeToken);
+    setPendingChallengeToken(challengeToken);
+  };
+
   const logout = () => {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
@@ -88,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         pendingEmail,
         login,
         verifyOtp,
+        resendOtp,
         logout,
       }}
     >
