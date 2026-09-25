@@ -5,6 +5,7 @@ import { ArrowLeftIcon, LoaderIcon, ShieldCheckIcon } from 'lucide-react';
 import { usersApi, USER_TYPE_SLUGS, type CreateStaffInput, type UserClass, type Gender } from '../../api/usersApi';
 import { officesApi, type Office } from '../../api/officesApi';
 import { ReusableInputField } from '../../components/ReusableInputField';
+import { PHONE_MAX_DIGITS, sanitizePhoneInput } from '../../utils/phone';
 
 const USER_TYPE_LABELS: Record<string, string> = {
   super_admin: 'Super Admin',
@@ -96,7 +97,16 @@ export function StaffFormPage() {
           <ReusableInputField label="Email Address" name="email" type="email" value={form.email} onChange={update('email')} required />
 
           <div className="grid grid-cols-2 gap-4">
-            <ReusableInputField label="Phone" name="phone" value={form.phone ?? ''} onChange={update('phone')} />
+            <ReusableInputField
+              label="Phone"
+              name="phone"
+              type="tel"
+              inputMode="numeric"
+              maxLength={PHONE_MAX_DIGITS}
+              placeholder="08031234567"
+              value={form.phone ?? ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, phone: sanitizePhoneInput(e.target.value) }))}
+            />
             <ReusableInputField label="Gender" name="gender" as="select" value={form.gender ?? ''} onChange={update('gender')} options={GENDER_OPTIONS} />
           </div>
 

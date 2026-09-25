@@ -5,6 +5,7 @@ import { ArrowLeftIcon, LoaderIcon, PlusIcon } from 'lucide-react';
 import { officesApi, type Office, type SaveOfficeInput } from '../../api/officesApi';
 import { locationsApi } from '../../api/locationsApi';
 import { ReusableInputField } from '../../components/ReusableInputField';
+import { PHONE_MAX_DIGITS, sanitizePhoneInput, toLocalPhone } from '../../utils/phone';
 import { useLocationOptions } from '../../hooks/useLocationOptions';
 
 interface OfficeForm {
@@ -68,7 +69,7 @@ export function OfficeFormPage() {
           name: office.name ?? '',
           parentId: office.parentId ? String(office.parentId) : '',
           address: office.address ?? '',
-          phone: office.phone ?? '',
+          phone: toLocalPhone(office.phone),
           email: office.email ?? '',
           openingDate: office.openingDate ?? '',
           notes: office.notes ?? '',
@@ -269,7 +270,16 @@ export function OfficeFormPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <ReusableInputField label="Phone" name="phone" value={form.phone} onChange={update('phone')} />
+            <ReusableInputField
+              label="Phone"
+              name="phone"
+              type="tel"
+              inputMode="numeric"
+              maxLength={PHONE_MAX_DIGITS}
+              placeholder="08031234567"
+              value={form.phone}
+              onChange={(e) => setForm((prev) => ({ ...prev, phone: sanitizePhoneInput(e.target.value) }))}
+            />
             <ReusableInputField label="Email" name="email" type="email" value={form.email} onChange={update('email')} />
           </div>
 

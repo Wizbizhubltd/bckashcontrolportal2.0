@@ -33,6 +33,7 @@ export interface StaffListFilters {
   officeId?: number;
   userType?: string;
   onboardingStatus?: OnboardingStatus;
+  search?: string;
   page?: number;
   pageSize?: number;
 }
@@ -64,6 +65,7 @@ function buildQuery(filters: StaffListFilters): string {
   if (filters.officeId) params.set('officeId', String(filters.officeId));
   if (filters.userType) params.set('userType', filters.userType);
   if (filters.onboardingStatus) params.set('onboardingStatus', filters.onboardingStatus);
+  if (filters.search) params.set('search', filters.search);
   params.set('page', String(filters.page ?? 1));
   params.set('pageSize', String(filters.pageSize ?? 20));
   return params.toString();

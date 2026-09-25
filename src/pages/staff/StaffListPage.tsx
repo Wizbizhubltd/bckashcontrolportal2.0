@@ -38,6 +38,7 @@ export function StaffListPage({ fixedUserType, title, subtitle, createLabel, cre
   const [officeId, setOfficeId] = useState('');
   const [userType, setUserType] = useState(fixedUserType ?? '');
   const [onboardingStatus, setOnboardingStatus] = useState((searchParams.get('onboardingStatus') as OnboardingStatus | null) ?? '');
+  const [search, setSearch] = useState('');
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -52,6 +53,7 @@ export function StaffListPage({ fixedUserType, title, subtitle, createLabel, cre
         officeId: officeId ? Number(officeId) : undefined,
         userType: fixedUserType || userType || undefined,
         onboardingStatus: (onboardingStatus || undefined) as OnboardingStatus | undefined,
+        search: search.trim() || undefined,
         page: pageToLoad,
         pageSize: PAGE_SIZE,
       });
@@ -67,12 +69,12 @@ export function StaffListPage({ fixedUserType, title, subtitle, createLabel, cre
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => void load(1), 150);
+    debounceRef.current = setTimeout(() => void load(1), 300);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [officeId, userType, onboardingStatus]);
+  }, [officeId, userType, onboardingStatus, search]);
 
   return (
     <div>
@@ -87,7 +89,15 @@ export function StaffListPage({ fixedUserType, title, subtitle, createLabel, cre
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className={`bg-white rounded-xl border border-gray-100 p-4 mb-4 grid grid-cols-1 gap-3 ${fixedUserType ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'}`}>
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name or email…"
+          className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+        />
+
         <select value={officeId} onChange={(e) => setOfficeId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
           <option value="">All Offices</option>
           {offices.map((o) => (

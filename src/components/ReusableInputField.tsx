@@ -19,6 +19,8 @@ type ReusableInputFieldProps = {
   rows?: number;
   options?: Option[];
   required?: boolean;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+  maxLength?: number;
 };
 
 export function ReusableInputField({
@@ -35,6 +37,8 @@ export function ReusableInputField({
   rows = 3,
   options = [],
   required,
+  inputMode,
+  maxLength,
 }: ReusableInputFieldProps) {
   const hasError = Boolean(touched && error);
   const baseClassName = `w-full px-3 py-2 border rounded-lg text-sm font-body focus:outline-none focus:ring-2 ${hasError ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-primary/20'}`;
@@ -62,7 +66,7 @@ export function ReusableInputField({
       )}
 
       {as === 'input' && (
-        <input id={name} name={name} type={type} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={baseClassName} />
+        <input id={name} name={name} type={type} inputMode={inputMode} maxLength={maxLength} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={baseClassName} />
       )}
 
       {hasError && <p className="text-xs text-red-600 font-body">{error}</p>}
