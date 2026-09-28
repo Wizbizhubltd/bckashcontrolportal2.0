@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { PlusIcon, CheckCircleIcon, XCircleIcon, PencilIcon, SearchIcon, XIcon } from 'lucide-react';
+import { PlusIcon, CheckCircleIcon, XCircleIcon, PencilIcon, SearchIcon, XIcon, BanknoteIcon, ShieldAlertIcon, HourglassIcon } from 'lucide-react';
+import { officeFundsApi, type OfficeFundingTotals } from '../../api/officeFundsApi';
+import { StatCard } from '../../components/StatCard';
+import { formatMoney } from '../../utils/money';
 import { officesApi, type Office } from '../../api/officesApi';
 import { useLocationOptions } from '../../hooks/useLocationOptions';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -145,6 +148,8 @@ export function OfficesListPage() {
         </Link>
       </div>
 
+      <FundingOverview />
+
       <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative w-full sm:max-w-xs">
@@ -284,5 +289,37 @@ export function OfficesListPage() {
         confirmVariant="danger"
       />
     </div>
+  );
+}
+
+const fundingsLabel = (count: number) => `${count.toLocaleString()} funding${count === 1 ? '' : 's'}`;
+
+/** Office funding across every office — amounts in bold, number of fundings underneath. */
+function FundingOverview() {
+  const [totals, setTotals] = useState<OfficeFundingTotals | null>(null);
+
+  useEffect(() => {
+    void officeFundsApi.totals().then(setTotals).catch(() => undefined);
+  }, []);
+
+  const loading = totals === null;
+  return (
+    <section className="mb-6">
+      <h2 className="text-xs font-heading font-bold text-gray-400 uppercase tracking-widest mb-3">Office funding</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          colored
+          label="Total office funding"
+          value={formatMoney(totals?.total.amount ?? 0)}
+          sublabel={totals ? `${fundingsLabel(totals.total.count)}${totals.cancelled.count ? ` · ${totals.cancelled.count} cancelled, not counted` : ''}` : undefined}
+          icon={BanknoteIcon}
+          tone="primary"
+          loading={loading}
+        />
+        <StatCard colored label="Acknowledged" value={formatMoney(totals?.acknowledged.amount ?? 0)} sublabel={totals ? fundingsLabel(totals.acknowledged.count) : undefined} icon={CheckCircleIcon} tone="success" loading={loading} />
+        <StatCard colored label="Disputed" value={formatMoney(totals?.disputed.amount ?? 0)} sublabel={totals ? fundingsLabel(totals.disputed.count) : undefined} icon={ShieldAlertIcon} tone="danger" loading={loading} />
+        <StatCard colored label="Pending acknowledgement" value={formatMoney(totals?.pending.amount ?? 0)} sublabel={totals ? fundingsLabel(totals.pending.count) : undefined} icon={HourglassIcon} tone="warning" loading={loading} />
+      </div>
+    </section>
   );
 }

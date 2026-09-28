@@ -94,7 +94,27 @@ export interface Bank {
   category: string;
 }
 
+export interface FundingTotal {
+  amount: number;
+  count: number;
+}
+
+/** Office funding across every office. `total` is everything sent that wasn't cancelled. */
+export interface OfficeFundingTotals {
+  total: FundingTotal;
+  acknowledged: FundingTotal;
+  disputed: FundingTotal;
+  pending: FundingTotal;
+  cancelled: FundingTotal;
+}
+
 export const officeFundsApi = {
+  /** Super admins only. */
+  async totals(): Promise<OfficeFundingTotals> {
+    const response = await apiClient.get<OfficeFundingTotals>('/office-fundings/totals');
+    return response.data;
+  },
+
   async banks(): Promise<Bank[]> {
     const response = await apiClient.get<Bank[]>('/banks');
     return response.data;
