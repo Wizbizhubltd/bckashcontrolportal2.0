@@ -11,6 +11,7 @@ import { SettingGroupCard } from './SettingGroupCard';
 import { AccessRulesSection, AllSettingsSection, ClientRulesSection, LoanProductsSection, OfficeStructureSection } from './SettingsSections';
 import { FeesSection } from './FeesSection';
 import { RolePermissionsSection } from './RolePermissionsSection';
+import { RoleModulesSection } from './RoleModulesSection';
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
@@ -132,6 +133,7 @@ export function SettingsPage() {
               {activeTab.key === 'fees' && <FeesSection />}
               {activeTab.key === 'rbac' && (
                 <>
+                  <RoleModulesSection />
                   <RolePermissionsSection />
                   <AccessRulesSection />
                 </>

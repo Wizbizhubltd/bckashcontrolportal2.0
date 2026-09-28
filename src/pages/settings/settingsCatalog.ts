@@ -99,7 +99,7 @@ export const SETTINGS_TABS: SettingsTab[] = [
     key: 'loan',
     label: 'Loan',
     icon: LandmarkIcon,
-    description: 'Loan products and the rules for overdue loans and applications.',
+    description: 'No applications are waiting for a decision. loans and applications.',
     groups: [
       {
         title: 'Overdue & penalty rules',

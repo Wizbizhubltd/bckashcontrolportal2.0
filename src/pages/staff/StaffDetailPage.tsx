@@ -12,9 +12,12 @@ import {
   ContactIcon,
   LandmarkIcon,
   HistoryIcon,
+  MapIcon,
+  LoaderIcon,
 } from 'lucide-react';
 import { usersApi, USER_TYPE_SLUGS, type StaffUser, type UserClass } from '../../api/usersApi';
 import { officesApi, type Office } from '../../api/officesApi';
+import { zonesApi, type Zone } from '../../api/zonesApi';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { StaffActivityTab, StaffClientsTab, StaffLoansTab } from './StaffRecordTabs';
@@ -68,13 +71,18 @@ export function StaffDetailPage() {
   const [changeClassOpen, setChangeClassOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [zoneIds, setZoneIds] = useState<number[]>([]);
+  const [savingZones, setSavingZones] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [staffData, officeData] = await Promise.all([usersApi.get(staffId), officesApi.list()]);
+      const [staffData, officeData, zoneData] = await Promise.all([usersApi.get(staffId), officesApi.list(), zonesApi.list()]);
       setStaff(staffData);
       setOffices(officeData);
+      setZones(zoneData);
+      setZoneIds(staffData.zones.map((z) => z.id));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load staff member.');
     } finally {
@@ -94,6 +102,20 @@ export function StaffDetailPage() {
       toast.success(successMessage);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Action failed.');
+    }
+  };
+
+  const saveZones = async () => {
+    setSavingZones(true);
+    try {
+      const updated = await usersApi.assignZones(staffId, zoneIds);
+      setStaff(updated);
+      setZoneIds(updated.zones.map((z) => z.id));
+      toast.success('Zones updated.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update zones.');
+    } finally {
+      setSavingZones(false);
     }
   };
 
@@ -209,6 +231,7 @@ export function StaffDetailPage() {
                   </>
                 )}
                 {staff.onboardingStatus === 'Declined' && <Detail label="Onboarding declined" value={formatDate(staff.onboardingDeclinedDate)} />}
+                {staff.userType === 'director' && <Detail label="Zones overseen" value={staff.zones.map((z) => z.name).join(', ')} />}
               </dl>
               {staff.notes && (
                 <div className="mt-4">
@@ -216,9 +239,69 @@ export function StaffDetailPage() {
                 </div>
               )}
             </section>
+
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="text-sm font-heading font-bold text-gray-400 uppercase tracking-widest">Onboarding Details</h2>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${staff.profileComplete ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                  {staff.profileComplete ? 'Complete' : `${staff.missingProfileFields.length} missing`}
+                </span>
+              </div>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+                <Detail label="Date of birth" value={staff.dateOfBirth ? formatDate(staff.dateOfBirth) : null} />
+                <Detail label="Next of kin" value={staff.nextOfKinName} />
+                <Detail label="Next of kin phone" value={staff.nextOfKinPhone} />
+                <Detail label="Relationship" value={staff.nextOfKinRelationship} />
+                <Detail label="Bank" value={staff.bankName} />
+                <Detail label="Account number" value={staff.bankAccountNumber} />
+                <Detail label="Account name" value={staff.bankAccountName} />
+              </dl>
+              {!staff.profileComplete && (
+                <p className="mt-3 text-xs text-gray-500">The staff member completes these from their Office Portal profile.</p>
+              )}
+            </section>
           </div>
         )}
       </div>
+
+      {staff.userType === 'director' && (
+        <section className="bg-white rounded-xl border border-gray-100 p-6 mt-4">
+          <div className="flex items-center gap-2 mb-1">
+            <MapIcon size={16} className="text-primary" />
+            <h2 className="text-sm font-heading font-bold text-gray-400 uppercase tracking-widest">Zones Overseen</h2>
+          </div>
+          <p className="text-xs text-gray-500 mb-4">A director manages every office in the zones ticked here, from the Office Portal.</p>
+          {zones.length === 0 ? (
+            <p className="text-sm text-gray-400">No zones exist yet — create them under Zones first.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {zones.map((zone) => (
+                <label key={zone.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={zoneIds.includes(zone.id)}
+                    onChange={(e) => setZoneIds((prev) => (e.target.checked ? [...prev, zone.id] : prev.filter((id) => id !== zone.id)))}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/20"
+                  />
+                  <span className="flex-1">{zone.name}</span>
+                  <span className="text-xs text-gray-400">{zone.officeCount} offices</span>
+                </label>
+              ))}
+            </div>
+          )}
+          <div className="flex justify-end mt-4">
+            <button
+              type="button"
+              onClick={() => void saveZones()}
+              disabled={savingZones || zones.length === 0}
+              className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-sm font-heading font-bold px-4 py-2 rounded-lg disabled:opacity-60"
+            >
+              {savingZones && <LoaderIcon size={14} className="animate-spin" />}
+              Save Zones
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="bg-white rounded-xl border border-gray-100 p-6 mt-4">
         <h2 className="text-sm font-heading font-bold text-gray-400 uppercase tracking-widest mb-4">RBAC & Access Controls</h2>

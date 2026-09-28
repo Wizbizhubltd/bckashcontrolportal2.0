@@ -36,6 +36,20 @@ export interface StaffUser {
   /** Last change made through a staff-management action (sign-ins don't count). */
   updatedAt: string | null;
   updatedByName: string | null;
+  // Onboarding details the staff member fills in from their office-portal profile.
+  dateOfBirth: string | null;
+  nextOfKinName: string | null;
+  nextOfKinPhone: string | null;
+  nextOfKinRelationship: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
+  /** Zones a director oversees — every office in them is theirs to manage. */
+  zones: { id: number; name: string }[];
+  /** Office-portal modules ticked for the staff member's role. */
+  modules: string[];
+  missingProfileFields: string[];
+  profileComplete: boolean;
 }
 
 /** One audit-trail entry for an action the staff member took. */
@@ -153,6 +167,12 @@ export const usersApi = {
 
   async unblock(id: number): Promise<StaffUser> {
     const response = await apiClient.post<StaffUser>(`/users/${id}/unblock`);
+    return response.data;
+  },
+
+  /** Super admins only: replaces every zone a director oversees. */
+  async assignZones(id: number, zoneIds: number[]): Promise<StaffUser> {
+    const response = await apiClient.put<StaffUser>(`/users/${id}/zones`, { zoneIds });
     return response.data;
   },
 
