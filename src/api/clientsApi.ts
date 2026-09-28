@@ -23,6 +23,8 @@ export interface ClientListFilters {
   search?: string;
   officeId?: number;
   status?: ClientStatus;
+  /** The staff member the client is assigned to. */
+  staffId?: number;
   page?: number;
   pageSize?: number;
 }
@@ -33,6 +35,7 @@ export const clientsApi = {
     if (filters.search) params.set('search', filters.search);
     if (filters.officeId) params.set('officeId', String(filters.officeId));
     if (filters.status) params.set('status', filters.status);
+    if (filters.staffId) params.set('staffId', String(filters.staffId));
     params.set('page', String(filters.page ?? 1));
     params.set('pageSize', String(filters.pageSize ?? 15));
 

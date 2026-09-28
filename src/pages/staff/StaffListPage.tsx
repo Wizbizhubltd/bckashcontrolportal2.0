@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { PlusIcon } from 'lucide-react';
 import { usersApi, USER_TYPE_SLUGS, type StaffUser, type OnboardingStatus } from '../../api/usersApi';
@@ -28,6 +28,7 @@ interface StaffListPageProps {
 
 export function StaffListPage({ fixedUserType, title, subtitle, createLabel, createTo }: StaffListPageProps) {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [items, setItems] = useState<StaffUser[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -153,9 +154,10 @@ export function StaffListPage({ fixedUserType, title, subtitle, createLabel, cre
               </tr>
             ) : (
               items.map((staff) => (
-                <tr key={staff.id} className="hover:bg-gray-50">
+                <tr key={staff.id} onClick={() => navigate(`/staff/${staff.id}`)} className="hover:bg-gray-50 cursor-pointer">
                   <td className="px-4 py-3 text-gray-700">
-                    <Link to={`/staff/${staff.id}`} className="text-primary hover:underline font-medium">
+                    {/* Kept as a real link for keyboard users and open-in-new-tab; stopPropagation so the row doesn't navigate a second time. */}
+                    <Link to={`/staff/${staff.id}`} onClick={(e) => e.stopPropagation()} className="text-primary hover:underline font-medium">
                       {`${staff.firstName ?? ''} ${staff.lastName ?? ''}`.trim() || staff.email}
                     </Link>
                   </td>

@@ -1,155 +1,153 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { PlusIcon, TrashIcon, SaveIcon } from 'lucide-react';
+import { Building2Icon, LandmarkIcon, BellIcon, UserPlusIcon } from 'lucide-react';
 import { settingsApi, type Setting } from '../../api/settingsApi';
-import { ConfirmationModal } from '../../components/ConfirmationModal';
+import { loanProductsApi, type LoanProduct } from '../../api/loanProductsApi';
+import { StatCard } from '../../components/StatCard';
+import { loadCurrencyDisplay } from '../../utils/money';
+import { SETTINGS_TABS, AUTO_NOTIFICATION_KEYS, isOn, type SettingsTabKey } from './settingsCatalog';
+import { SettingGroupCard } from './SettingGroupCard';
+import { AccessRulesSection, AllSettingsSection, ClientRulesSection, LoanProductsSection, OfficeStructureSection } from './SettingsSections';
+import { FeesSection } from './FeesSection';
+import { RolePermissionsSection } from './RolePermissionsSection';
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
+  const [products, setProducts] = useState<LoanProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [edits, setEdits] = useState<Record<number, string>>({});
-  const [newKey, setNewKey] = useState('');
-  const [newValue, setNewValue] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<Setting | null>(null);
 
-  const load = async () => {
-    setLoading(true);
+  // In the URL so a refresh or a shared link opens the same tab.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab = SETTINGS_TABS.find((t) => t.key === tabParam) ?? SETTINGS_TABS[0];
+  const selectTab = (key: SettingsTabKey) => setSearchParams(key === SETTINGS_TABS[0].key ? {} : { tab: key }, { replace: true });
+
+  const loadSettings = async () => {
     try {
-      const data = await settingsApi.list();
-      setSettings(data);
+      setSettings(await settingsApi.list());
+      // A saved currency display change applies across the portal straight away.
+      void loadCurrencyDisplay();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load settings.');
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const loadProducts = async () => {
+    try {
+      setProducts(await loanProductsApi.list());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load loan products.');
     }
   };
 
   useEffect(() => {
-    void load();
+    void Promise.all([loadSettings(), loadProducts()]).finally(() => setLoading(false));
   }, []);
 
-  const handleCreate = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!newKey.trim()) return;
-    try {
-      await settingsApi.create(newKey.trim(), newValue || null);
-      toast.success('Setting added.');
-      setNewKey('');
-      setNewValue('');
-      void load();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add setting.');
-    }
-  };
+  const settingsByKey = useMemo(() => new Map(settings.map((s) => [s.settingKey, s])), [settings]);
+  const value = (key: string) => settingsByKey.get(key)?.settingValue ?? null;
 
-  const handleSave = async (setting: Setting) => {
-    const value = edits[setting.id] ?? setting.settingValue ?? '';
-    try {
-      await settingsApi.update(setting.id, value);
-      toast.success(`${setting.settingKey} updated.`);
-      void load();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update setting.');
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await settingsApi.remove(deleteTarget.id);
-      toast.success(`${deleteTarget.settingKey} removed.`);
-      setDeleteTarget(null);
-      void load();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to remove setting.');
-    }
-  };
+  const activeProducts = products.filter((p) => p.active).length;
+  const notificationsOn = AUTO_NOTIFICATION_KEYS.filter((key) => isOn(value(key))).length;
+  const selfRegistration = isOn(value('allow_self_registration'));
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-heading font-bold text-primary">Rules & Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">System-wide key/value operating parameters offices run by.</p>
+        <p className="text-sm text-gray-500 mt-1">The rules offices and staff operate by. Settings marked “Not enforced yet” are saved but not yet acted on by the system.</p>
       </div>
 
-      <form onSubmit={handleCreate} className="bg-white rounded-xl border border-gray-100 p-4 mb-4 flex flex-col sm:flex-row gap-3">
-        <input
-          value={newKey}
-          onChange={(e) => setNewKey(e.target.value)}
-          placeholder="Setting key (e.g. loan.max_active_per_client)"
-          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard
+          colored
+          label="Organisation"
+          value={value('company_name') || 'Not set'}
+          sublabel={value('company_email') ?? undefined}
+          icon={Building2Icon}
+          tone="primary"
+          loading={loading}
         />
-        <input
-          value={newValue}
-          onChange={(e) => setNewValue(e.target.value)}
-          placeholder="Value"
-          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+        <StatCard
+          colored
+          label="Active loan products"
+          value={`${activeProducts} of ${products.length}`}
+          sublabel="Available for new applications"
+          icon={LandmarkIcon}
+          tone="success"
+          loading={loading}
         />
-        <button type="submit" disabled={!newKey.trim()} className="flex items-center justify-center gap-2 bg-accent hover:bg-[#e64a19] text-white text-sm font-heading font-bold px-4 py-2 rounded-lg disabled:opacity-60">
-          <PlusIcon size={16} />
-          Add
-        </button>
-      </form>
-
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left text-gray-500">
-            <tr>
-              <th className="px-4 py-3 font-medium">Key</th>
-              <th className="px-4 py-3 font-medium">Value</th>
-              <th className="px-4 py-3 font-medium text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {loading ? (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-gray-400">
-                  Loading…
-                </td>
-              </tr>
-            ) : settings.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-gray-400">
-                  No settings defined yet.
-                </td>
-              </tr>
-            ) : (
-              settings.map((setting) => (
-                <tr key={setting.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-700 font-mono text-xs">{setting.settingKey}</td>
-                  <td className="px-4 py-3">
-                    <input
-                      value={edits[setting.id] ?? setting.settingValue ?? ''}
-                      onChange={(e) => setEdits((prev) => ({ ...prev, [setting.id]: e.target.value }))}
-                      className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => void handleSave(setting)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors" title="Save">
-                        <SaveIcon size={16} />
-                      </button>
-                      <button onClick={() => setDeleteTarget(setting)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                        <TrashIcon size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <StatCard
+          colored
+          label="Automatic notifications on"
+          value={`${notificationsOn} of ${AUTO_NOTIFICATION_KEYS.length}`}
+          sublabel={isOn(value('sms_enabled')) ? 'SMS sending on' : 'SMS sending off'}
+          icon={BellIcon}
+          tone="info"
+          loading={loading}
+        />
+        <StatCard
+          colored
+          label="Customer self-registration"
+          value={selfRegistration ? 'On' : 'Off'}
+          sublabel={selfRegistration ? 'Customers can sign up themselves' : 'Only staff create customers'}
+          icon={UserPlusIcon}
+          tone={selfRegistration ? 'warning' : 'neutral'}
+          loading={loading}
+        />
       </div>
 
-      <ConfirmationModal
-        isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={() => void handleDelete()}
-        title={`Remove ${deleteTarget?.settingKey ?? 'setting'}?`}
-        description="This will remove the key entirely — any code or process reading it will fall back to its default behavior."
-        confirmLabel="Remove"
-        confirmVariant="danger"
-      />
+      <div className="flex flex-col lg:flex-row gap-6">
+        <nav role="tablist" aria-orientation="vertical" className="lg:w-60 flex-shrink-0 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible bg-white rounded-xl border border-gray-100 p-2 self-start w-full">
+          {SETTINGS_TABS.map((tab) => {
+            const selected = tab.key === activeTab.key;
+            return (
+              <button
+                key={tab.key}
+                role="tab"
+                aria-selected={selected}
+                onClick={() => selectTab(tab.key)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left whitespace-nowrap border-l-4 transition-colors ${selected ? 'bg-primary/5 text-primary font-heading font-bold border-accent' : 'text-gray-600 hover:bg-gray-50 border-transparent'}`}
+              >
+                <tab.icon size={18} className="flex-shrink-0" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="flex-1 min-w-0 space-y-4" role="tabpanel">
+          <div>
+            <h2 className="text-lg font-heading font-bold text-gray-900">{activeTab.label}</h2>
+            <p className="text-sm text-gray-500">{activeTab.description}</p>
+          </div>
+
+          {loading ? (
+            <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-400">Loading…</div>
+          ) : (
+            <>
+              {activeTab.key === 'organisation' && <OfficeStructureSection />}
+              {activeTab.key === 'loan' && <LoanProductsSection products={products} onChanged={loadProducts} />}
+              {activeTab.key === 'fees' && <FeesSection />}
+              {activeTab.key === 'rbac' && (
+                <>
+                  <RolePermissionsSection />
+                  <AccessRulesSection />
+                </>
+              )}
+              {activeTab.key === 'onboarding' && <ClientRulesSection />}
+
+              {activeTab.groups.map((group) => (
+                // Keyed by tab too, so unsaved edits don't leak into another tab's card of the same title.
+                <SettingGroupCard key={`${activeTab.key}:${group.title}`} group={group} settingsByKey={settingsByKey} onSaved={loadSettings} />
+              ))}
+
+              {activeTab.key === 'organisation' && <AllSettingsSection settings={settings} onChanged={loadSettings} />}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

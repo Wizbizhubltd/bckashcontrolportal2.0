@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import { ArrowUpRightIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-type Tone = 'primary' | 'accent' | 'success' | 'warning' | 'danger' | 'info';
+type Tone = 'primary' | 'accent' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 const toneClasses: Record<Tone, string> = {
   primary: 'bg-primary/10 text-primary',
@@ -11,6 +11,18 @@ const toneClasses: Record<Tone, string> = {
   warning: 'bg-amber-100 text-amber-700',
   danger: 'bg-red-100 text-red-700',
   info: 'bg-sky-100 text-sky-700',
+  neutral: 'bg-gray-200 text-gray-700',
+};
+
+// Tinted card surfaces for the `colored` variant, so a row of metrics reads by colour at a glance.
+const coloredCardClasses: Record<Tone, string> = {
+  primary: 'bg-primary/5 border-primary/20 border-l-primary',
+  accent: 'bg-accent/5 border-accent/20 border-l-accent',
+  success: 'bg-emerald-50 border-emerald-200 border-l-emerald-500',
+  warning: 'bg-amber-50 border-amber-200 border-l-amber-500',
+  danger: 'bg-red-50 border-red-200 border-l-red-500',
+  info: 'bg-sky-50 border-sky-200 border-l-sky-500',
+  neutral: 'bg-gray-50 border-gray-200 border-l-gray-400',
 };
 
 interface StatCardProps {
@@ -21,12 +33,15 @@ interface StatCardProps {
   tone?: Tone;
   to?: string;
   loading?: boolean;
+  /** Tints the whole card in its tone (with a coloured left edge) instead of only the icon. */
+  colored?: boolean;
 }
 
 /** Dashboard tile primitive — BCKashWebClient had no equivalent, so this is built for the control portal specifically. */
-export function StatCard({ label, value, sublabel, icon: Icon, tone = 'primary', to, loading }: StatCardProps) {
+export function StatCard({ label, value, sublabel, icon: Icon, tone = 'primary', to, loading, colored }: StatCardProps) {
+  const surface = colored ? `border border-l-4 ${coloredCardClasses[tone]}` : 'bg-white border border-gray-100';
   const content = (
-    <div className="group relative bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-elevated transition-shadow p-5 h-full flex flex-col justify-between">
+    <div className={`group relative rounded-2xl shadow-card hover:shadow-elevated transition-shadow p-5 h-full flex flex-col justify-between ${surface}`}>
       <div className="flex items-start justify-between">
         <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${toneClasses[tone]}`}>
           <Icon size={20} />

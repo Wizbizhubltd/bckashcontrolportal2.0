@@ -27,6 +27,25 @@ export interface StaffUser {
   onboardingDeclinedDate: string | null;
   onboardingDeclinedReason: string | null;
   lastLogin: string | null;
+  gender: Gender;
+  address: string | null;
+  notes: string | null;
+  createdAt: string | null;
+  createdByName: string | null;
+  onboardingApprovedByName: string | null;
+  /** Last change made through a staff-management action (sign-ins don't count). */
+  updatedAt: string | null;
+  updatedByName: string | null;
+}
+
+/** One audit-trail entry for an action the staff member took. */
+export interface StaffActivity {
+  id: number;
+  module: string | null;
+  action: string | null;
+  notes: string | null;
+  officeId: number | null;
+  createdAt: string | null;
 }
 
 export interface StaffListFilters {
@@ -79,6 +98,11 @@ export const usersApi = {
 
   async get(id: number): Promise<StaffUser> {
     const response = await apiClient.get<StaffUser>(`/users/${id}`);
+    return response.data;
+  },
+
+  async activity(id: number, page: number, pageSize: number): Promise<PagedResult<StaffActivity>> {
+    const response = await apiClient.get<PagedResult<StaffActivity>>(`/users/${id}/activity?page=${page}&pageSize=${pageSize}`);
     return response.data;
   },
 

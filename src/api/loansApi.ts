@@ -22,6 +22,8 @@ export interface LoanListItem {
 export interface LoanListFilters {
   status?: LoanStatus;
   officeId?: number;
+  /** The staff member responsible for the loan. */
+  loanOfficerId?: number;
   search?: string;
   page?: number;
   pageSize?: number;
@@ -31,6 +33,7 @@ function buildQuery(filters: LoanListFilters): string {
   const params = new URLSearchParams();
   if (filters.status) params.set('status', filters.status);
   if (filters.officeId) params.set('officeId', String(filters.officeId));
+  if (filters.loanOfficerId) params.set('loanOfficerId', String(filters.loanOfficerId));
   if (filters.search) params.set('search', filters.search);
   params.set('page', String(filters.page ?? 1));
   params.set('pageSize', String(filters.pageSize ?? 15));

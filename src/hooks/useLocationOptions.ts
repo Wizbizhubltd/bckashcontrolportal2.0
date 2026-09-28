@@ -12,10 +12,18 @@ export function useLocationOptions(stateId: number | undefined, lgaId: number | 
   const [lgas, setLgas] = useState<Lga[]>([]);
   const [cities, setCities] = useState<City[]>([]);
 
+  const reloadZones = useCallback(async () => {
+    try {
+      setZones(await zonesApi.list());
+    } catch {
+      // Keep whatever zones were already loaded.
+    }
+  }, []);
+
   useEffect(() => {
     void locationsApi.states().then(setStates).catch(() => undefined);
-    void zonesApi.list().then(setZones).catch(() => undefined);
-  }, []);
+    void reloadZones();
+  }, [reloadZones]);
 
   useEffect(() => {
     if (!stateId) {
@@ -41,5 +49,5 @@ export function useLocationOptions(stateId: number | undefined, lgaId: number | 
     void reloadCities();
   }, [reloadCities]);
 
-  return { states, lgas, cities, zones, reloadCities };
+  return { states, lgas, cities, zones, reloadCities, reloadZones };
 }

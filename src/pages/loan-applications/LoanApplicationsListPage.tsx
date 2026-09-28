@@ -6,12 +6,10 @@ import { officesApi, type Office } from '../../api/officesApi';
 import { loanProductsApi, type LoanProduct } from '../../api/loanProductsApi';
 import { Pagination } from '../../components/Pagination';
 import { StatusBadge, type StatusType } from '../../components/StatusBadge';
+import { formatMoney } from '../../utils/money';
 
 const PAGE_SIZE = 15;
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(amount);
-}
 
 export function LoanApplicationsListPage() {
   const [searchParams] = useSearchParams();
@@ -122,7 +120,7 @@ export function LoanApplicationsListPage() {
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-700">{officeName(item.officeId)}</td>
                   <td className="px-4 py-3 text-gray-700">{productName(item.loanProductId)}</td>
-                  <td className="px-4 py-3 text-gray-700 font-medium">{formatCurrency(item.amount)}</td>
+                  <td className="px-4 py-3 text-gray-700 font-medium">{formatMoney(item.amount)}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={item.status as StatusType} />
                   </td>
