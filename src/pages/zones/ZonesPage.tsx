@@ -4,6 +4,13 @@ import { LoaderIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { zonesApi, type Zone } from '../../api/zonesApi';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { ReusableInputField } from '../../components/ReusableInputField';
+import { BulkActionMenu, BulkCheckbox, BulkSelectionBar } from '../../components/BulkActions';
+import { useBulkSelection } from '../../hooks/useBulkSelection';
+import { usersApi, type StaffUser } from '../../api/usersApi';
+
+type ZoneBulkAction = 'assign-director';
+
+const BULK_ACTIONS = [{ value: 'assign-director' as const, label: 'Assign zones to a director' }];
 
 interface ZoneForm {
   id: number | null;
@@ -18,6 +25,9 @@ export function ZonesPage() {
   const [form, setForm] = useState<ZoneForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Zone | null>(null);
+  const bulk = useBulkSelection<ZoneBulkAction>();
+  const [directors, setDirectors] = useState<StaffUser[]>([]);
+  const [directorPickerOpen, setDirectorPickerOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -33,6 +43,31 @@ export function ZonesPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  const startBulk = (action: ZoneBulkAction) => {
+    bulk.start(action);
+    // Loaded when needed rather than on every visit to the page.
+    void usersApi
+      .list({ userType: 'director', pageSize: 100 })
+      .then((result) => setDirectors(result.items))
+      .catch((error) => toast.error(error instanceof Error ? error.message : 'Failed to load directors.'));
+  };
+
+  const assignSelectedToDirector = async (directorId: string | undefined) => {
+    setDirectorPickerOpen(false);
+    if (!directorId) return;
+    try {
+      const director = await usersApi.addZones(Number(directorId), [...bulk.selected]);
+      const name = `${director.firstName ?? ''} ${director.lastName ?? ''}`.trim() || director.email;
+      toast.success(`${bulk.selected.size} zone${bulk.selected.size === 1 ? '' : 's'} assigned to ${name}. They now oversee ${director.zones.length}.`);
+      bulk.cancel();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to assign the zones.');
+    }
+  };
+
+  const zoneIds = zones.map((z) => z.id);
+  const ticked = zoneIds.filter((id) => bulk.selected.has(id)).length;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -76,12 +111,15 @@ export function ZonesPage() {
           <h1 className="text-xl font-heading font-bold text-primary">Zones</h1>
           <p className="text-sm text-gray-500 mt-1">Groups of offices. Only super admins can change zones, and a zone can only be deleted when none of its offices has staff.</p>
         </div>
+        <div className="flex items-center gap-3">
+        <BulkActionMenu options={BULK_ACTIONS} onChoose={startBulk} disabled={bulk.selecting || loading || zones.length === 0} />
         {!form && (
           <button onClick={() => setForm({ id: null, name: '', description: '' })} className="flex items-center gap-2 bg-accent hover:bg-[#e64a19] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
             <PlusIcon size={16} />
             Add Zone
           </button>
         )}
+        </div>
       </div>
 
       {form && (
@@ -101,11 +139,29 @@ export function ZonesPage() {
         </form>
       )}
 
+      {bulk.selecting && (
+        <BulkSelectionBar
+          actionLabel="Assign to director"
+          selectedCount={bulk.selected.size}
+          totalCount={zones.length}
+          noun="zones"
+          onSelectAll={() => bulk.selectOnly(zoneIds)}
+          onClear={() => bulk.selectOnly([])}
+          onContinue={() => setDirectorPickerOpen(true)}
+          onCancel={bulk.cancel}
+        />
+      )}
+
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-gray-500">
               <tr>
+                {bulk.selecting && (
+                  <th className="pl-4 py-3 w-8">
+                    <BulkCheckbox label="Select every zone" checked={zoneIds.length > 0 && ticked === zoneIds.length} indeterminate={ticked > 0} onChange={() => bulk.toggleAll(zoneIds)} />
+                  </th>
+                )}
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Description</th>
                 <th className="px-4 py-3 font-medium text-right">Offices</th>
@@ -117,15 +173,24 @@ export function ZonesPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-gray-400">Loading…</td>
+                  <td colSpan={bulk.selecting ? 7 : 6} className="px-4 py-6 text-center text-gray-400">Loading…</td>
                 </tr>
               ) : zones.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-gray-400">No zones yet.</td>
+                  <td colSpan={bulk.selecting ? 7 : 6} className="px-4 py-6 text-center text-gray-400">No zones yet.</td>
                 </tr>
               ) : (
                 zones.map((zone) => (
-                  <tr key={zone.id} className="hover:bg-gray-50">
+                  <tr
+                    key={zone.id}
+                    onClick={bulk.selecting ? () => bulk.toggle(zone.id) : undefined}
+                    className={`${bulk.selecting ? 'cursor-pointer' : ''} ${bulk.selected.has(zone.id) ? 'bg-primary/5' : 'hover:bg-gray-50'}`}
+                  >
+                    {bulk.selecting && (
+                      <td className="pl-4 py-3 w-8">
+                        <BulkCheckbox label={`Select ${zone.name}`} checked={bulk.selected.has(zone.id)} onChange={() => bulk.toggle(zone.id)} />
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-gray-700 font-medium">{zone.name}</td>
                     <td className="px-4 py-3 text-gray-600">{zone.description || '—'}</td>
                     <td className="px-4 py-3 text-gray-700 text-right tabular-nums">{zone.officeCount}</td>
@@ -156,6 +221,27 @@ export function ZonesPage() {
           </table>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={directorPickerOpen}
+        onClose={() => setDirectorPickerOpen(false)}
+        onConfirm={(directorId) => void assignSelectedToDirector(directorId)}
+        title={`Assign ${bulk.selected.size} zone${bulk.selected.size === 1 ? '' : 's'} to a director`}
+        description={
+          directors.length === 0
+            ? 'There are no directors yet. Create a staff member with the Director role first.'
+            : "The director oversees these zones on top of the ones they already have, and manages every office in them from the Office Portal."
+        }
+        inputType="select"
+        inputLabel="Director"
+        selectOptions={directors.map((d) => ({
+          label: `${`${d.firstName ?? ''} ${d.lastName ?? ''}`.trim() || d.email}${d.zones.length ? ` · ${d.zones.length} zone${d.zones.length === 1 ? '' : 's'} now` : ''}`,
+          value: String(d.id),
+        }))}
+        requireInput
+        confirmDisabled={directors.length === 0}
+        confirmLabel="Assign zones"
+      />
 
       <ConfirmationModal
         isOpen={!!deleteTarget}

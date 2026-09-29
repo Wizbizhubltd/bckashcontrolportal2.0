@@ -34,10 +34,22 @@ export interface OtpVerifyResponse {
   userData: UserData;
 }
 
-function toFriendlyError(error: unknown): Error {
+/** An auth error carrying the API's machine-readable `reason`, when it sent one. */
+export interface AuthError extends Error {
+  reason?: string;
+}
+
+/** The API refuses anyone but a super admin here (other staff belong on the office portal) with this reason. */
+export function isWrongPortalError(error: unknown): boolean {
+  return (error as AuthError | undefined)?.reason === 'wrong_portal';
+}
+
+function toFriendlyError(error: unknown): AuthError {
   if (axios.isAxiosError(error)) {
-    const title = (error.response?.data as { title?: string } | undefined)?.title;
-    return new Error(title || error.message);
+    const data = error.response?.data as { title?: string; reason?: string } | undefined;
+    const friendly: AuthError = new Error(data?.title || error.message);
+    friendly.reason = data?.reason;
+    return friendly;
   }
   return error instanceof Error ? error : new Error('Unexpected error');
 }
@@ -46,7 +58,8 @@ export const authApi = {
   /** Password check only — every login now always continues into the OTP step below. */
   async login(email: string, password: string): Promise<OtpChallengeResponse> {
     try {
-      const response = await authClient.post<OtpChallengeResponse>('/auth/login', { email, password });
+      // `portal` makes the API refuse everyone but super admins, who are the only users of this portal.
+      const response = await authClient.post<OtpChallengeResponse>('/auth/login', { email, password, portal: 'control' });
       if (response.data.challengeType === 'totp') {
         throw new Error('This account has authenticator-app 2FA enabled, which the control portal does not support yet. Disable it or sign in from the main portal.');
       }

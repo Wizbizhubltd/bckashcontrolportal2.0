@@ -34,6 +34,12 @@ export const zonesApi = {
     return response.data;
   },
 
+  /** Bulk action: moves every listed office into the zone. */
+  async assignOffices(id: number, officeIds: number[]): Promise<Zone> {
+    const response = await apiClient.post<Zone>(`/zones/${id}/offices`, { officeIds });
+    return response.data;
+  },
+
   async remove(id: number): Promise<void> {
     await apiClient.delete(`/zones/${id}`);
   },

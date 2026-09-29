@@ -75,6 +75,12 @@ export const officesApi = {
     return response.data;
   },
 
+  /** Sets the office's branch manager (null removes them) without resubmitting the whole office. */
+  async assignManager(id: number, managerId: number | null): Promise<Office> {
+    const response = await apiClient.post<Office>(`/offices/${id}/manager`, { managerId });
+    return response.data;
+  },
+
   async activate(id: number): Promise<Office> {
     const response = await apiClient.post<Office>(`/offices/${id}/activate`);
     return response.data;

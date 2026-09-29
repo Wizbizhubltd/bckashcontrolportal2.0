@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ArrowLeftIcon, LoaderIcon, ShieldCheckIcon } from 'lucide-react';
+import { LoaderIcon, ShieldCheckIcon } from 'lucide-react';
 import { usersApi, USER_TYPE_SLUGS, type CreateStaffInput, type UserClass, type Gender } from '../../api/usersApi';
 import { officesApi, type Office } from '../../api/officesApi';
 import { ReusableInputField } from '../../components/ReusableInputField';
@@ -77,11 +77,6 @@ export function StaffFormPage() {
 
   return (
     <div className="max-w-2xl">
-      <Link to={backTo} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary mb-4">
-        <ArrowLeftIcon size={14} />
-        Back
-      </Link>
-
       <div className="bg-white rounded-xl border border-gray-100 p-6">
         <div className="flex items-center gap-2 mb-6">
           {lockedUserType === 'super_admin' && <ShieldCheckIcon size={20} className="text-primary" />}

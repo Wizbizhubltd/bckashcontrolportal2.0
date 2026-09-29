@@ -1,19 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { SearchIcon, AlertTriangleIcon } from 'lucide-react';
 import { loansApi, type LoanListItem } from '../../api/loansApi';
 import { officesApi, type Office } from '../../api/officesApi';
 import { Pagination } from '../../components/Pagination';
 import { StatusBadge, type StatusType } from '../../components/StatusBadge';
+import { formatMoney } from '../../utils/money';
 
 const PAGE_SIZE = 15;
 
-function formatCurrency(amount: number | null): string {
-  if (amount === null) return '—';
-  return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(amount);
-}
 
 export function LateLoansListPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState<LoanListItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
@@ -110,10 +109,10 @@ export function LateLoansListPage() {
               </tr>
             ) : (
               items.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
+                <tr key={item.id} onClick={() => navigate(`/loans/${item.id}`)} className="cursor-pointer hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-700 font-medium">{item.accountNumber ?? `#${item.id}`}</td>
                   <td className="px-4 py-3 text-gray-700">{officeName(item.officeId)}</td>
-                  <td className="px-4 py-3 text-gray-700">{formatCurrency(item.approvedAmount)}</td>
+                  <td className="px-4 py-3 text-gray-700">{formatMoney(item.approvedAmount)}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={item.status as StatusType} />
                   </td>

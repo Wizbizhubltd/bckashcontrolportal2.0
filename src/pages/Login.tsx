@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRightIcon, MailIcon, ShieldCheckIcon } from 'lucide-react';
+import { ArrowRightIcon, MailIcon, ShieldAlertIcon, ShieldCheckIcon } from 'lucide-react';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { AuthAlert, AuthHeader, AuthPasswordInput, AuthSubmitButton, AuthTextInput } from '../components/auth/AuthFields';
 import { useAuth } from '../context/AuthContext';
+import { isWrongPortalError } from '../api/authApi';
 import { SIGNED_OUT_REASON_KEY } from '../config/storageKeys';
 
 // Read once and cleared, so the notice shows on the redirect to this page but not on later visits.
@@ -27,18 +28,21 @@ export function Login() {
   const [email, setEmail] = useState(locationState.email ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [unauthorised, setUnauthorised] = useState(false);
   const [loading, setLoading] = useState(false);
   const [signedOutReason] = useState(takeSignedOutReason);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
+    setUnauthorised(false);
     setLoading(true);
 
     try {
       await login(email, password);
       navigate('/verify-otp', { replace: true });
     } catch (submitError) {
+      setUnauthorised(isWrongPortalError(submitError));
       setError(submitError instanceof Error ? submitError.message : 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -53,7 +57,17 @@ export function Login() {
         <AuthAlert tone="success">Your password has been updated. Sign in with your new password.</AuthAlert>
       )}
       {signedOutReason && !error && <AuthAlert>{signedOutReason}</AuthAlert>}
-      {error && <AuthAlert>{error}</AuthAlert>}
+      {unauthorised ? (
+        <div role="alert" className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <ShieldAlertIcon size={18} className="mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-heading font-bold">Unauthorised</p>
+            <p className="mt-0.5">Only super admins can sign in to the Control Portal. Staff should sign in to the Office Portal instead.</p>
+          </div>
+        </div>
+      ) : (
+        error && <AuthAlert>{error}</AuthAlert>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <AuthTextInput

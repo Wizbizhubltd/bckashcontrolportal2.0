@@ -1,20 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { loanApplicationsApi, type LoanApplicationListItem, type ApprovalStatus } from '../../api/loanApplicationsApi';
 import { officesApi, type Office } from '../../api/officesApi';
 import { loanProductsApi, type LoanProduct } from '../../api/loanProductsApi';
 import { Pagination } from '../../components/Pagination';
 import { StatusBadge, type StatusType } from '../../components/StatusBadge';
+import { formatMoney } from '../../utils/money';
 
 const PAGE_SIZE = 15;
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(amount);
-}
 
 export function LoanApplicationsListPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [items, setItems] = useState<LoanApplicationListItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -106,25 +105,36 @@ export function LoanApplicationsListPage() {
               <th className="px-4 py-3 font-medium">Loan Product</th>
               <th className="px-4 py-3 font-medium">Amount</th>
               <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium text-right">Loan</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-400">Loading…</td>
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">Loading…</td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-400">No loan applications found.</td>
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">No loan applications found.</td>
               </tr>
             ) : (
               items.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
+                <tr key={item.id} onClick={() => navigate(`/loan-applications/${item.id}`)} className="cursor-pointer hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-700">{officeName(item.officeId)}</td>
                   <td className="px-4 py-3 text-gray-700">{productName(item.loanProductId)}</td>
-                  <td className="px-4 py-3 text-gray-700 font-medium">{formatCurrency(item.amount)}</td>
+                  <td className="px-4 py-3 text-gray-700 font-medium">{formatMoney(item.amount)}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={item.status as StatusType} />
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {item.loanId ? (
+                      // A real link, so the loan opens directly; stopPropagation keeps the row from opening the application too.
+                      <Link to={`/loans/${item.loanId}`} onClick={(e) => e.stopPropagation()} className="text-sm font-medium text-primary hover:underline">
+                        View loan
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
                   </td>
                 </tr>
               ))

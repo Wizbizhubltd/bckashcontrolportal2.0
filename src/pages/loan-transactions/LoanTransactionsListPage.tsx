@@ -5,13 +5,10 @@ import { SearchIcon } from 'lucide-react';
 import { loanTransactionsApi, type LoanTransactionItem, type LoanTransactionType } from '../../api/loanTransactionsApi';
 import { officesApi, type Office } from '../../api/officesApi';
 import { Pagination } from '../../components/Pagination';
+import { formatMoney } from '../../utils/money';
 
 const PAGE_SIZE = 15;
 
-function formatCurrency(amount: number | null): string {
-  if (amount === null) return '—';
-  return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(amount);
-}
 
 function monthStart(): string {
   const now = new Date();
@@ -130,7 +127,7 @@ export function LoanTransactionsListPage() {
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-700">{item.date ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-700">{item.loanId ? `#${item.loanId}` : '—'}</td>
-                  <td className="px-4 py-3 text-gray-700 font-medium">{formatCurrency(item.amount)}</td>
+                  <td className="px-4 py-3 text-gray-700 font-medium">{formatMoney(item.amount)}</td>
                   <td className="px-4 py-3 text-gray-500 truncate max-w-xs">{item.notes ?? '—'}</td>
                 </tr>
               ))

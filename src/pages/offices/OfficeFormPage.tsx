@@ -1,12 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ArrowLeftIcon, LoaderIcon, PlusIcon } from 'lucide-react';
+import { LoaderIcon, PlusIcon } from 'lucide-react';
 import { officesApi, type Office, type SaveOfficeInput } from '../../api/officesApi';
 import { locationsApi } from '../../api/locationsApi';
+import type { Zone } from '../../api/zonesApi';
 import { ReusableInputField } from '../../components/ReusableInputField';
 import { PHONE_MAX_DIGITS, sanitizePhoneInput, toLocalPhone } from '../../utils/phone';
 import { useLocationOptions } from '../../hooks/useLocationOptions';
+import { usersApi, type StaffUser } from '../../api/usersApi';
+import { CreateZoneModal } from '../../components/CreateZoneModal';
 
 interface OfficeForm {
   name: string;
@@ -21,6 +24,7 @@ interface OfficeForm {
   lgaId: string;
   cityId: string;
   zoneId: string;
+  managerId: string;
 }
 
 const emptyForm: OfficeForm = {
@@ -36,6 +40,7 @@ const emptyForm: OfficeForm = {
   lgaId: '',
   cityId: '',
   zoneId: '',
+  managerId: '',
 };
 
 const toId = (value: string) => (value ? Number(value) : undefined);
@@ -52,11 +57,18 @@ export function OfficeFormPage() {
   const [saving, setSaving] = useState(false);
   const [newCityName, setNewCityName] = useState<string | null>(null);
   const [addingCity, setAddingCity] = useState(false);
+  const [zoneModalOpen, setZoneModalOpen] = useState(false);
+  const [managers, setManagers] = useState<StaffUser[]>([]);
 
-  const { states, lgas, cities, zones, reloadCities } = useLocationOptions(toId(form.stateId), toId(form.lgaId));
+  const { states, lgas, cities, zones, reloadCities, reloadZones } = useLocationOptions(toId(form.stateId), toId(form.lgaId));
 
   useEffect(() => {
     void officesApi.list().then(setOffices).catch(() => undefined);
+    // Branch managers acknowledge the office's funding, so only active managers are offered.
+    void usersApi
+      .list({ userType: 'manager', pageSize: 100 })
+      .then((result) => setManagers(result.items.filter((u) => !u.blocked && u.onboardingStatus === 'Approved')))
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -78,6 +90,7 @@ export function OfficeFormPage() {
           lgaId: office.lgaId ? String(office.lgaId) : '',
           cityId: office.cityId ? String(office.cityId) : '',
           zoneId: office.zoneId ? String(office.zoneId) : '',
+          managerId: office.managerId ? String(office.managerId) : '',
         });
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Failed to load office.');
@@ -118,6 +131,12 @@ export function OfficeFormPage() {
     }
   };
 
+  const handleZoneCreated = async (zone: Zone) => {
+    await reloadZones();
+    setForm((prev) => ({ ...prev, zoneId: String(zone.id) }));
+    setZoneModalOpen(false);
+  };
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
@@ -135,6 +154,7 @@ export function OfficeFormPage() {
         lgaId: toId(form.lgaId),
         cityId: toId(form.cityId),
         zoneId: toId(form.zoneId),
+        managerId: toId(form.managerId) ?? null,
       };
       if (isEdit) {
         await officesApi.update(Number(id), payload);
@@ -160,11 +180,6 @@ export function OfficeFormPage() {
 
   return (
     <div className="max-w-2xl">
-      <Link to={isEdit ? `/offices/${id}` : '/offices'} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary mb-4">
-        <ArrowLeftIcon size={14} />
-        {isEdit ? 'Back to office' : 'Back to Office Directory'}
-      </Link>
-
       <div className="bg-white rounded-xl border border-gray-100 p-6">
         <div className="flex items-start justify-between gap-4 mb-6">
           <h1 className="text-xl font-heading font-bold text-primary">{isEdit ? 'Edit Office' : 'New Office / Branch'}</h1>
@@ -241,21 +256,22 @@ export function OfficeFormPage() {
                 </div>
               )}
             </div>
-            <ReusableInputField
-              label="Zone"
-              name="zoneId"
-              as="select"
-              value={form.zoneId}
-              onChange={update('zoneId')}
-              options={zones.map((z) => ({ label: z.name, value: String(z.id) }))}
-              required
-            />
+            <div>
+              <ReusableInputField
+                label="Zone"
+                name="zoneId"
+                as="select"
+                value={form.zoneId}
+                onChange={update('zoneId')}
+                options={zones.map((z) => ({ label: z.name, value: String(z.id) }))}
+                required
+              />
+              <button type="button" onClick={() => setZoneModalOpen(true)} className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                <PlusIcon size={12} />
+                {zones.length === 0 ? 'No zones yet? Create one' : 'Zone not listed? Add it'}
+              </button>
+            </div>
           </div>
-          {zones.length === 0 && (
-            <p className="text-xs text-gray-500 -mt-2">
-              No zones exist yet. <Link to="/zones" className="text-primary hover:underline">Create a zone</Link> first.
-            </p>
-          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <ReusableInputField
@@ -267,6 +283,21 @@ export function OfficeFormPage() {
               options={offices.filter((o) => String(o.id) !== id).map((o) => ({ label: o.name ?? `Office #${o.id}`, value: String(o.id) }))}
             />
             <ReusableInputField label="Opening Date" name="openingDate" type="date" value={form.openingDate} onChange={update('openingDate')} />
+          </div>
+
+          <div>
+            <ReusableInputField
+              label="Branch manager"
+              name="managerId"
+              as="select"
+              value={form.managerId}
+              onChange={update('managerId')}
+              options={managers.map((m) => ({
+                label: `${`${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() || m.email}${m.officeName ? ` — ${m.officeName}` : ''}`,
+                value: String(m.id),
+              }))}
+            />
+            <p className="text-xs text-gray-500 mt-1">Acknowledges or disputes the funding this office receives. Staff with the Manager role are listed.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -313,6 +344,9 @@ export function OfficeFormPage() {
           </div>
         </form>
       </div>
+
+      {/* Outside the office <form>: the modal has its own form, and forms can't nest. */}
+      <CreateZoneModal isOpen={zoneModalOpen} onClose={() => setZoneModalOpen(false)} onCreated={(zone) => void handleZoneCreated(zone)} existingZones={zones} />
     </div>
   );
 }
