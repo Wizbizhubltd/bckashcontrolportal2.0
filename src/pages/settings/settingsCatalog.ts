@@ -4,10 +4,11 @@ import { Building2Icon, LandmarkIcon, ShieldCheckIcon, BellIcon, UserPlusIcon, R
 /**
  * Which stored settings (legacy `settings` table keys) each Settings tab edits, and how. Groups
  * without `enforced: true` are stored only — the API doesn't act on them yet, and the page says so.
- * Enforced so far: Company profile (validated on save; used in every email and SMS the API sends).
+ * Enforced so far: Company profile (validated on save; used in every email and SMS the API sends),
+ * among others — each group or field says so with its badge. The SMS master switch stops every SMS.
  */
 
-export type SettingFieldType = 'toggle' | 'number' | 'text' | 'secret' | 'textarea' | 'select';
+export type SettingFieldType = 'toggle' | 'number' | 'text' | 'secret' | 'textarea' | 'select' | 'checkboxes';
 
 export interface SettingField {
   key: string;
@@ -19,6 +20,8 @@ export interface SettingField {
   unit?: string;
   /** For a single enforced field in a group that otherwise isn't — the badge then shows per field. */
   enforced?: boolean;
+  /** What the system does while the setting has never been saved, shown until it is. */
+  defaultValue?: string;
 }
 
 export interface SettingGroup {
@@ -45,13 +48,20 @@ export const isOn = (value: string | null | undefined) => value === '1' || value
 
 const PLACEHOLDER_HELP = 'Placeholders such as {clientName}, {loanNumber} and {paymentAmount} are filled in when the message is sent.';
 
-function templateGroup(title: string, prefix: { subject?: string; email?: string; sms?: string }): SettingGroup {
+/** Every placeholder the loan messages fill in (see the API's LoanNotificationService). */
+const LOAN_PLACEHOLDER_HELP =
+  'Filled in when sent: {clientName}, {loanNumber}, {approvedAmount}, {loanBalance}, {paymentAmount}, {paymentDate}, {firstPaymentAmount}, {firstPaymentDate}, {companyName}. Emails go as plain text — any HTML tags are removed. Leave blank to use the default wording.';
+
+function templateGroup(title: string, prefix: { subject?: string; email?: string; sms?: string }, options: { enforced?: boolean; help?: string } = {}): SettingGroup {
+  const help = options.help ?? PLACEHOLDER_HELP;
   const fields: SettingField[] = [];
   if (prefix.subject) fields.push({ key: prefix.subject, label: 'Email subject', type: 'text' });
-  if (prefix.email) fields.push({ key: prefix.email, label: 'Email message', type: 'textarea', help: PLACEHOLDER_HELP });
-  if (prefix.sms) fields.push({ key: prefix.sms, label: 'SMS message', type: 'textarea', help: 'Keep SMS messages short — long ones are split and billed as several messages.' });
-  return { title, fields, collapsible: true };
+  if (prefix.email) fields.push({ key: prefix.email, label: 'Email message', type: 'textarea', help });
+  if (prefix.sms) fields.push({ key: prefix.sms, label: 'SMS message', type: 'textarea', help: `${options.help ? `${help} ` : ''}Keep SMS messages short — long ones are split and billed as several messages.` });
+  return { title, fields, collapsible: true, enforced: options.enforced };
 }
+
+const loanTemplate = (title: string, prefix: { subject: string; email: string; sms: string }) => templateGroup(title, prefix, { enforced: true, help: LOAN_PLACEHOLDER_HELP });
 
 export const SETTINGS_TABS: SettingsTab[] = [
   {
@@ -101,6 +111,59 @@ export const SETTINGS_TABS: SettingsTab[] = [
     icon: LandmarkIcon,
     description: 'No applications are waiting for a decision. loans and applications.',
     groups: [
+      {
+        title: 'Face capture',
+        description:
+          'A client’s face is captured at onboarding and matched again with a live capture before their loan is disbursed. Tick who may run that match — anyone else sees the check but can’t start it.',
+        enforced: true,
+        fields: [
+          {
+            key: 'face_capture_required',
+            label: 'Face capture mandatory',
+            help: 'When on, a client can’t be approved or have a loan raised until their face is captured, and every client receiving a loan must pass the face match before it’s disbursed. When off, face capture is optional everywhere — staff can still capture and match faces, but nothing waits on it.',
+            type: 'toggle',
+            defaultValue: '1',
+          },
+          {
+            key: 'loan_face_match_roles',
+            label: 'Roles allowed to run the face match',
+            help: 'At least one. Until this is saved, anyone who can service loans may run it — super admins, controllers and managers.',
+            type: 'checkboxes',
+            options: [
+              { label: 'Super admins', value: 'super_admin' },
+              { label: 'Directors', value: 'director' },
+              { label: 'Controllers', value: 'controller' },
+              { label: 'Managers', value: 'manager' },
+              { label: 'Marketers', value: 'marketer' },
+            ],
+            defaultValue: 'super_admin,controller,manager',
+          },
+        ],
+      },
+      {
+        title: 'Client savings',
+        description:
+          'A share of every repayment on a client’s loan goes into their savings instead of the loan, so each instalment is grossed up to still clear the loan on schedule. Savings carry across loans: withdrawn in full once no loan is running, less the charge below while one is, and forfeited if a loan is written off.',
+        enforced: true,
+        fields: [
+          {
+            key: 'client_savings_rate',
+            label: 'Savings share of each repayment',
+            help: 'Fixed onto a loan when it’s disbursed, so a change only affects loans disbursed afterwards — running loans keep the share their instalments were worked out with. 0 turns savings off for new loans. Up to 50.',
+            type: 'number',
+            unit: '%',
+            defaultValue: '2.5',
+          },
+          {
+            key: 'client_savings_early_withdrawal_fee',
+            label: 'Early cash-out charge',
+            help: 'Kept from the savings when a client withdraws while one of their loans is still running. Applies from the next withdrawal.',
+            type: 'number',
+            unit: '%',
+            defaultValue: '15',
+          },
+        ],
+      },
       {
         title: 'Overdue & penalty rules',
         description: 'When a repayment or a loan officially counts as overdue — used by the dashboard and the Late Loans list — and whether the penalties in Fees & Payments are charged automatically.',
@@ -180,10 +243,21 @@ export const SETTINGS_TABS: SettingsTab[] = [
     groups: [
       {
         title: 'Channels',
-        fields: [{ key: 'sms_enabled', label: 'SMS sending', help: 'Master switch — when off, no SMS is sent, whatever the settings below say.', type: 'toggle' }],
+        enforced: true,
+        fields: [
+          {
+            key: 'sms_enabled',
+            label: 'SMS sending',
+            help: 'Master switch for every SMS the system sends — sign-in codes, loan confirmation codes, campaigns and every message below. When off, nothing is texted; emails still go, so staff can still sign in with the emailed code.',
+            type: 'toggle',
+            defaultValue: '1',
+          },
+        ],
       },
       {
         title: 'Loan messages',
+        description: 'Sent to the customer (or, for a group loan, the group’s phone and email) as the loan moves along. A switch that has never been saved is off.',
+        enforced: true,
         fields: [
           {
             key: 'loan_raised_client_code',
@@ -200,24 +274,27 @@ export const SETTINGS_TABS: SettingsTab[] = [
       },
       {
         title: 'Repayment messages',
+        description:
+          'Receipts go when a repayment is recorded. Reminders are sent once a day, once per instalment (the overdue notice once per loan); “missed” and “overdue” follow the Overdue & penalty rules on the Loan tab. Only repayments that fell overdue in the last week are chased, so switching these on doesn’t text customers about old arrears.',
+        enforced: true,
         fields: [
           { key: 'auto_payment_receipt_email', label: 'Payment receipt — email', type: 'toggle' },
           { key: 'auto_payment_receipt_sms', label: 'Payment receipt — SMS', type: 'toggle' },
           { key: 'auto_repayment_email_reminder', label: 'Upcoming repayment reminder — email', type: 'toggle' },
           { key: 'auto_repayment_sms_reminder', label: 'Upcoming repayment reminder — SMS', type: 'toggle' },
-          { key: 'auto_repayment_days', label: 'Send the reminder', help: 'How many days before the due date.', type: 'number', unit: 'days before' },
+          { key: 'auto_repayment_days', label: 'Send the reminder', help: 'How many days before the due date. 3 if not set.', type: 'number', unit: 'days before' },
           { key: 'auto_overdue_repayment_email_reminder', label: 'Missed repayment — email', type: 'toggle' },
           { key: 'auto_overdue_repayment_sms_reminder', label: 'Missed repayment — SMS', type: 'toggle' },
           { key: 'auto_overdue_loan_email_reminder', label: 'Loan overdue — email', type: 'toggle' },
           { key: 'auto_overdue_loan_sms_reminder', label: 'Loan overdue — SMS', type: 'toggle' },
         ],
       },
-      templateGroup('Template: loan approved', { subject: 'loan_approved_email_subject', email: 'loan_approved_email_template', sms: 'loan_approved_sms_template' }),
-      templateGroup('Template: loan disbursed', { subject: 'loan_disbursed_email_subject', email: 'loan_disbursed_email_template', sms: 'loan_disbursed_sms_template' }),
-      templateGroup('Template: payment received', { subject: 'payment_received_email_subject', email: 'payment_received_email_template', sms: 'payment_received_sms_template' }),
-      templateGroup('Template: upcoming repayment reminder', { subject: 'loan_payment_reminder_subject', email: 'loan_payment_reminder_email_template', sms: 'loan_payment_reminder_sms_template' }),
-      templateGroup('Template: missed repayment', { subject: 'missed_payment_email_subject', email: 'missed_payment_email_template', sms: 'missed_payment_sms_template' }),
-      templateGroup('Template: loan overdue', { subject: 'loan_overdue_email_subject', email: 'loan_overdue_email_template', sms: 'loan_overdue_sms_template' }),
+      loanTemplate('Template: loan approved', { subject: 'loan_approved_email_subject', email: 'loan_approved_email_template', sms: 'loan_approved_sms_template' }),
+      loanTemplate('Template: loan disbursed', { subject: 'loan_disbursed_email_subject', email: 'loan_disbursed_email_template', sms: 'loan_disbursed_sms_template' }),
+      loanTemplate('Template: payment received', { subject: 'payment_received_email_subject', email: 'payment_received_email_template', sms: 'payment_received_sms_template' }),
+      loanTemplate('Template: upcoming repayment reminder', { subject: 'loan_payment_reminder_subject', email: 'loan_payment_reminder_email_template', sms: 'loan_payment_reminder_sms_template' }),
+      loanTemplate('Template: missed repayment', { subject: 'missed_payment_email_subject', email: 'missed_payment_email_template', sms: 'missed_payment_sms_template' }),
+      loanTemplate('Template: loan overdue', { subject: 'loan_overdue_email_subject', email: 'loan_overdue_email_template', sms: 'loan_overdue_sms_template' }),
     ],
   },
   {

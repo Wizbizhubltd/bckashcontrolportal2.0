@@ -11,6 +11,13 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { Pagination } from '../../components/Pagination';
 import type { ApiError } from '../../api/apiClient';
+import { zonesApi } from '../../api/zonesApi';
+import { BulkActionMenu, BulkCheckbox, BulkSelectionBar } from '../../components/BulkActions';
+import { useBulkSelection } from '../../hooks/useBulkSelection';
+
+type OfficeBulkAction = 'add-to-zone';
+
+const BULK_ACTIONS = [{ value: 'add-to-zone' as const, label: 'Add offices to a zone' }];
 
 const PAGE_SIZE = 15;
 
@@ -40,6 +47,8 @@ export function OfficesListPage() {
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<OfficeFilters>(noFilters);
   const [page, setPage] = useState(1);
+  const bulk = useBulkSelection<OfficeBulkAction>();
+  const [zonePickerOpen, setZonePickerOpen] = useState(false);
 
   const { states, lgas, cities, zones } = useLocationOptions(
     filters.stateId ? Number(filters.stateId) : undefined,
@@ -112,6 +121,23 @@ export function OfficesListPage() {
     }
   };
 
+  const addSelectedToZone = async (zoneId: string | undefined) => {
+    setZonePickerOpen(false);
+    if (!zoneId) return;
+    const zoneName = zones.find((z) => z.id === Number(zoneId))?.name ?? 'the zone';
+    try {
+      await zonesApi.assignOffices(Number(zoneId), [...bulk.selected]);
+      toast.success(`${bulk.selected.size} office${bulk.selected.size === 1 ? '' : 's'} added to ${zoneName}.`);
+      bulk.cancel();
+      void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add the offices to the zone.');
+    }
+  };
+
+  const pageIds = pagedOffices.map((o) => o.id);
+  const pageTicked = pageIds.filter((id) => bulk.selected.has(id)).length;
+
   const requestDeactivate = (office: Office) => {
     setDeactivateWarning(null);
     setDeactivateTarget(office);
@@ -152,6 +178,7 @@ export function OfficesListPage() {
 
       <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 space-y-3">
         <div className="flex flex-wrap items-center gap-3">
+          <BulkActionMenu options={BULK_ACTIONS} onChoose={bulk.start} disabled={bulk.selecting || loading} />
           <div className="relative w-full sm:max-w-xs">
             <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -207,11 +234,34 @@ export function OfficesListPage() {
         </div>
       </div>
 
+      {bulk.selecting && (
+        <BulkSelectionBar
+          actionLabel="Add to zone"
+          selectedCount={bulk.selected.size}
+          totalCount={filtered.length}
+          noun="offices"
+          onSelectAll={() => bulk.selectOnly(filtered.map((o) => o.id))}
+          onClear={() => bulk.selectOnly([])}
+          onContinue={() => setZonePickerOpen(true)}
+          onCancel={bulk.cancel}
+        />
+      )}
+
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-gray-500">
             <tr>
+              {bulk.selecting && (
+                <th className="pl-4 py-3 w-8">
+                  <BulkCheckbox
+                    label="Select every office on this page"
+                    checked={pageIds.length > 0 && pageTicked === pageIds.length}
+                    indeterminate={pageTicked > 0}
+                    onChange={() => bulk.toggleAll(pageIds)}
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Office Code</th>
               <th className="px-4 py-3 font-medium">Zone</th>
@@ -223,15 +273,25 @@ export function OfficesListPage() {
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">Loading…</td>
+                <td colSpan={bulk.selecting ? 7 : 6} className="px-4 py-6 text-center text-gray-400">Loading…</td>
               </tr>
             ) : pagedOffices.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">No offices found.</td>
+                <td colSpan={bulk.selecting ? 7 : 6} className="px-4 py-6 text-center text-gray-400">No offices found.</td>
               </tr>
             ) : (
               pagedOffices.map((office) => (
-                <tr key={office.id} onClick={() => navigate(`/offices/${office.id}`)} className="hover:bg-gray-50 cursor-pointer">
+                <tr
+                  key={office.id}
+                  // While picking offices for a bulk action, clicking a row ticks it instead of opening it.
+                  onClick={() => (bulk.selecting ? bulk.toggle(office.id) : navigate(`/offices/${office.id}`))}
+                  className={`cursor-pointer ${bulk.selected.has(office.id) ? 'bg-primary/5' : 'hover:bg-gray-50'}`}
+                >
+                  {bulk.selecting && (
+                    <td className="pl-4 py-3 w-8">
+                      <BulkCheckbox label={`Select ${office.name ?? 'office'}`} checked={bulk.selected.has(office.id)} onChange={() => bulk.toggle(office.id)} />
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-gray-700 font-medium">
                     <Link to={`/offices/${office.id}`} onClick={(e) => e.stopPropagation()} className="hover:text-primary hover:underline">
                       {office.name}
@@ -271,6 +331,19 @@ export function OfficesListPage() {
 
         <Pagination page={page} pageSize={PAGE_SIZE} totalCount={filtered.length} onPageChange={setPage} />
       </div>
+
+      <ConfirmationModal
+        isOpen={zonePickerOpen}
+        onClose={() => setZonePickerOpen(false)}
+        onConfirm={(zoneId) => void addSelectedToZone(zoneId)}
+        title={`Add ${bulk.selected.size} office${bulk.selected.size === 1 ? '' : 's'} to a zone`}
+        description="Each selected office moves into this zone, out of any zone it's in now. Directors overseeing either zone gain or lose those offices straight away."
+        inputType="select"
+        inputLabel="Zone"
+        selectOptions={zones.map((z) => ({ label: z.name, value: String(z.id) }))}
+        requireInput
+        confirmLabel="Add to zone"
+      />
 
       <ConfirmationModal
         isOpen={!!deactivateTarget}

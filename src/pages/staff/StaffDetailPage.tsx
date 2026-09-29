@@ -14,6 +14,7 @@ import {
   HistoryIcon,
   MapIcon,
   LoaderIcon,
+  PencilIcon,
 } from 'lucide-react';
 import { usersApi, USER_TYPE_SLUGS, type StaffUser, type UserClass } from '../../api/usersApi';
 import { officesApi, type Office } from '../../api/officesApi';
@@ -21,6 +22,7 @@ import { zonesApi, type Zone } from '../../api/zonesApi';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { StaffActivityTab, StaffClientsTab, StaffLoansTab } from './StaffRecordTabs';
+import { StaffRecordEditModal } from './StaffRecordEditModal';
 
 const USER_TYPE_LABELS: Record<string, string> = {
   super_admin: 'Super Admin',
@@ -71,6 +73,7 @@ export function StaffDetailPage() {
   const [changeClassOpen, setChangeClassOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [zones, setZones] = useState<Zone[]>([]);
   const [zoneIds, setZoneIds] = useState<number[]>([]);
   const [savingZones, setSavingZones] = useState(false);
@@ -147,9 +150,16 @@ export function StaffDetailPage() {
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <StatusBadge status={staff.onboardingStatus} />
             <StatusBadge status={staff.blocked ? 'Blocked' : 'Active'} />
+            <button
+              onClick={() => setEditOpen(true)}
+              className="ml-2 flex items-center gap-1.5 border border-gray-200 hover:border-primary/40 hover:bg-primary/5 text-primary text-sm font-heading font-bold px-3 py-1.5 rounded-lg"
+            >
+              <PencilIcon size={14} />
+              Edit Record
+            </button>
           </div>
         </div>
 
@@ -257,7 +267,7 @@ export function StaffDetailPage() {
                 <Detail label="Account name" value={staff.bankAccountName} />
               </dl>
               {!staff.profileComplete && (
-                <p className="mt-3 text-xs text-gray-500">The staff member completes these from their Office Portal profile.</p>
+                <p className="mt-3 text-xs text-gray-500">The staff member completes these from their Office Portal profile, or you can fill them in with Edit Record.</p>
               )}
             </section>
           </div>
@@ -328,6 +338,17 @@ export function StaffDetailPage() {
           </button>
         </div>
       </section>
+
+      {editOpen && (
+        <StaffRecordEditModal
+          staff={staff}
+          onClose={() => setEditOpen(false)}
+          onSaved={(updated) => {
+            setStaff(updated);
+            setEditOpen(false);
+          }}
+        />
+      )}
 
       <ConfirmationModal
         isOpen={declineOpen}

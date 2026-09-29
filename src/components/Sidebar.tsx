@@ -13,11 +13,19 @@ import {
   LogOutIcon,
   LandmarkIcon,
   ChevronDownIcon,
+  Trash2Icon,
+  FilePenLineIcon,
+  ClipboardCheckIcon,
+  UsersRoundIcon,
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../context/AuthContext';
+import { pendingActionsApi } from '../api/pendingActionsApi';
 
 const DASHBOARD_LINK = { to: '/', end: true, label: 'Dashboard', icon: LayoutDashboardIcon };
+const PENDING_ACTIONS_LINK = { to: '/pending-actions', label: 'Pending Actions', icon: ClipboardCheckIcon };
+// Clients and their groups (the groups are a tab on the same page).
+const CLIENTS_LINK = { to: '/clients', label: 'Clients', icon: UsersRoundIcon };
 
 // A loan's lifecycle in order: applied for, approved into a loan, late, and the money moving.
 const LOAN_MANAGEMENT_LINKS = [
@@ -34,6 +42,8 @@ const NAV_LINKS = [
   { to: '/cities', label: 'Cities', icon: MapPinIcon },
   { to: '/staff', label: 'Staff Directory', icon: UsersIcon },
   { to: '/super-admins', label: 'Super Admins', icon: ShieldCheckIcon },
+  { to: '/deletion-requests', label: 'Deletion Requests', icon: Trash2Icon },
+  { to: '/edit-requests', label: 'Edit Requests', icon: FilePenLineIcon },
   { to: '/settings', label: 'Rules & Settings', icon: SlidersIcon },
 ];
 
@@ -50,6 +60,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   // Opens whenever the user arrives on a loan page (sidebar or elsewhere, e.g. a dashboard card);
   // otherwise it stays however the user last toggled it.
   const [loansOpen, setLoansOpen] = useState(onLoanPage);
+  // Requests waiting on approval — refreshed on every page change, as acting on one means navigating.
+  const [pendingCount, setPendingCount] = useState(0);
+  useEffect(() => {
+    pendingActionsApi
+      .summary()
+      .then(setPendingCount)
+      .catch(() => undefined);
+  }, [pathname]);
   useEffect(() => {
     if (onLoanPage) setLoansOpen(true);
   }, [onLoanPage]);
@@ -90,6 +108,19 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         <NavLink to={DASHBOARD_LINK.to} end className={navLinkClasses}>
           <DASHBOARD_LINK.icon size={20} className="mr-3" />
           <span>{DASHBOARD_LINK.label}</span>
+        </NavLink>
+
+        <NavLink to={PENDING_ACTIONS_LINK.to} className={navLinkClasses}>
+          <PENDING_ACTIONS_LINK.icon size={20} className="mr-3" />
+          <span className="flex-1">{PENDING_ACTIONS_LINK.label}</span>
+          {pendingCount > 0 && (
+            <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold leading-none text-white">{pendingCount > 99 ? '99+' : pendingCount}</span>
+          )}
+        </NavLink>
+
+        <NavLink to={CLIENTS_LINK.to} className={(state) => navLinkClasses({ isActive: state.isActive || pathname.startsWith('/groups/') })}>
+          <CLIENTS_LINK.icon size={20} className="mr-3" />
+          <span>{CLIENTS_LINK.label}</span>
         </NavLink>
 
         <div>

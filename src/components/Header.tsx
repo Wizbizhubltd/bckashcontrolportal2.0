@@ -1,11 +1,15 @@
 import { useLocation } from 'react-router-dom';
 import { MenuIcon, SearchIcon, UserIcon } from 'lucide-react';
+import { PendingActionsBell } from './PendingActionsBell';
 
 interface HeaderProps {
   onOpenMobileSidebar: () => void;
 }
 
 const TITLES: { prefix: string; title: string }[] = [
+  { prefix: '/pending-actions', title: 'Pending Actions' },
+  { prefix: '/clients', title: 'Clients' },
+  { prefix: '/groups', title: 'Clients' },
   { prefix: '/offices', title: 'Office Directory' },
   { prefix: '/staff', title: 'Staff Directory' },
   { prefix: '/super-admins', title: 'Super Admins' },
@@ -34,6 +38,8 @@ export function Header({ onOpenMobileSidebar }: HeaderProps) {
           <SearchIcon size={18} className="text-gray-400 mr-2" />
           <input type="text" placeholder="Search offices, staff..." className="bg-transparent border-none focus:outline-none text-sm font-body w-full text-gray-700" />
         </div>
+
+        <PendingActionsBell />
 
         <div className="lg:hidden">
           <div className="w-8 h-8 rounded-full border border-gray-200 bg-gray-100 text-gray-500 flex items-center justify-center">

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { SearchIcon } from 'lucide-react';
 import { loansApi, LOAN_STATUSES, type LoanListItem, type LoanStatus } from '../../api/loansApi';
@@ -12,6 +12,7 @@ const PAGE_SIZE = 15;
 
 
 export function LoansListPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const [items, setItems] = useState<LoanListItem[]>([]);
@@ -118,7 +119,7 @@ export function LoansListPage() {
               </tr>
             ) : (
               items.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
+                <tr key={item.id} onClick={() => navigate(`/loans/${item.id}`)} className="cursor-pointer hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-700 font-medium">{item.accountNumber ?? `#${item.id}`}</td>
                   <td className="px-4 py-3 text-gray-700">{officeName(item.officeId)}</td>
                   <td className="px-4 py-3 text-gray-700">{formatMoney(item.appliedAmount)}</td>

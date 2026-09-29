@@ -23,6 +23,12 @@ export const CHARGE_TYPES: Record<ChargeType, TypeInfo> = {
   DisbursementRepayment: { label: 'Upfront fee, paid in instalments', lifecycle: 'Recurring', when: 'Set at disbursement and collected in equal parts with each repayment.', products: ['Loan'] },
   InstallmentFee: { label: 'Fee on every instalment', lifecycle: 'Recurring', when: 'Added to every instalment for the life of the loan.', products: ['Loan'] },
   SpecifiedDueDate: { label: 'Fee on a set date', lifecycle: 'One-time', when: 'Charged once, on a date chosen when it’s attached to a loan.', products: ['Loan'] },
+  ApplicationFormFee: {
+    label: 'Application form fee',
+    lifecycle: 'One-time',
+    when: 'Charged on every loan application — the non-refundable fee printed on the membership/loan form. Switch it off to stop charging it.',
+    products: ['Loan'],
+  },
   LoanReschedulingFee: { label: 'Rescheduling fee', lifecycle: 'When triggered', when: 'Charged each time the loan’s schedule is restructured.', products: ['Loan'] },
   OverdueInstallmentFee: { label: 'Late repayment fee', lifecycle: 'When triggered', when: 'Charged when an instalment isn’t paid by its due date (after any grace days).', products: ['Loan'], penalty: true },
   OverdueMaturity: { label: 'Loan default penalty', lifecycle: 'When triggered', when: 'Charged when the loan is still unpaid after its final repayment date (after any grace days).', products: ['Loan'], penalty: true },
@@ -72,6 +78,7 @@ const LOAN_OPTIONS: Partial<Record<ChargeType, ChargeOption[]>> = {
   OverdueInstallmentFee: ['Flat', ...INSTALLMENT_BASES],
   OverdueMaturity: ['Flat', 'PrincipalDue', 'TotalDue', 'TotalOutstanding'],
   EarlyRepayment: ['Flat', 'PrincipalDue', 'TotalOutstanding'],
+  ApplicationFormFee: ['Flat'],
 };
 
 export function allowedOptions(type: ChargeType, product: ChargeProduct): ChargeOption[] {

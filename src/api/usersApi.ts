@@ -1,5 +1,7 @@
 import apiClient from './apiClient';
-import type { PagedResult } from './types';
+import type { BulkActionResult, PagedResult } from './types';
+
+export type { BulkActionResult, BulkActionSkip } from './types';
 
 export type UserClass = 'Initiator' | 'Authorizer' | 'Reviewer';
 export type OnboardingStatus = 'Approved' | 'Pending' | 'Declined';
@@ -50,6 +52,12 @@ export interface StaffUser {
   modules: string[];
   missingProfileFields: string[];
   profileComplete: boolean;
+  /** Still on a temporary password an admin gave them — they haven't reset it yet. */
+  mustChangePassword: boolean;
+  /** When an admin last forced a password reset (single or bulk). */
+  passwordResetRequestedAt: string | null;
+  /** When the staff member last set their own password. */
+  passwordChangedAt: string | null;
 }
 
 /** One audit-trail entry for an action the staff member took. */
@@ -70,6 +78,27 @@ export interface StaffListFilters {
   page?: number;
   pageSize?: number;
 }
+
+/** A super admin's edit of a staff member's whole record. Office, role, class and status have their own actions. */
+export interface UpdateStaffRecordInput {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  gender: Gender;
+  address: string | null;
+  notes: string | null;
+  dateOfBirth: string | null;
+  nextOfKinName: string | null;
+  nextOfKinPhone: string | null;
+  nextOfKinRelationship: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
+}
+
+/** The ticked staff, or `all` to cover every staff member matching the list filters. */
+export type BulkStaffTarget = { userIds: number[] } | { all: true; filters: Omit<StaffListFilters, 'page' | 'pageSize'> };
 
 export interface CreateStaffInput {
   email: string;
@@ -135,6 +164,12 @@ export const usersApi = {
     return response.data;
   },
 
+  /** Super admins only: edits the whole staff record, including the onboarding details staff fill in themselves. */
+  async updateRecord(id: number, input: UpdateStaffRecordInput): Promise<StaffUser> {
+    const response = await apiClient.put<StaffUser>(`/users/${id}/record`, input);
+    return response.data;
+  },
+
   async approveOnboarding(id: number): Promise<StaffUser> {
     const response = await apiClient.post<StaffUser>(`/users/${id}/approve-onboarding`);
     return response.data;
@@ -170,9 +205,34 @@ export const usersApi = {
     return response.data;
   },
 
+  /** Super admins only, bulk action: adds zones to those a director already oversees. */
+  async addZones(id: number, zoneIds: number[]): Promise<StaffUser> {
+    const response = await apiClient.post<StaffUser>(`/users/${id}/zones`, { zoneIds });
+    return response.data;
+  },
+
   /** Super admins only: replaces every zone a director oversees. */
   async assignZones(id: number, zoneIds: number[]): Promise<StaffUser> {
     const response = await apiClient.put<StaffUser>(`/users/${id}/zones`, { zoneIds });
+    return response.data;
+  },
+
+  /** Bulk action: emails each active staff member (super admins are exempt) an 8-character temporary password they must change on next sign-in. */
+  async bulkResetPassword(target: BulkStaffTarget): Promise<BulkActionResult> {
+    const body = 'all' in target ? { all: true, ...target.filters } : { userIds: target.userIds };
+    const response = await apiClient.post<BulkActionResult>('/users/bulk/reset-password', body);
+    return response.data;
+  },
+
+  /** Bulk action: moves the ticked active staff to an office. Staff whose clients have active loans are skipped. */
+  async bulkTransfer(userIds: number[], officeId: number): Promise<BulkActionResult> {
+    const response = await apiClient.post<BulkActionResult>('/users/bulk/transfer', { userIds, officeId });
+    return response.data;
+  },
+
+  /** Bulk action: disables (blocks) the ticked active staff so they can't sign in. Super admins are exempt. */
+  async bulkDisable(userIds: number[]): Promise<BulkActionResult> {
+    const response = await apiClient.post<BulkActionResult>('/users/bulk/disable', { userIds });
     return response.data;
   },
 

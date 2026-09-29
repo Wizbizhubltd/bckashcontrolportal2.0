@@ -39,7 +39,7 @@ function FieldControl({ field, value, onChange }: { field: SettingField; value: 
     case 'number':
       return (
         <div className="flex items-center gap-2">
-          <input type="number" min={0} value={value} onChange={(e) => onChange(e.target.value)} className={`${inputClasses} w-24`} />
+          <input type="number" min={0} step="any" value={value} onChange={(e) => onChange(e.target.value)} className={`${inputClasses} w-24`} />
           {field.unit && <span className="text-sm text-gray-500 whitespace-nowrap">{field.unit}</span>}
         </div>
       );
@@ -54,6 +54,26 @@ function FieldControl({ field, value, onChange }: { field: SettingField; value: 
           ))}
         </select>
       );
+    case 'checkboxes': {
+      // Stored as a comma-separated list of the ticked options' values.
+      const ticked = new Set(value.split(',').map((v) => v.trim()).filter(Boolean));
+      const toggle = (option: string) => {
+        const next = new Set(ticked);
+        if (next.has(option)) next.delete(option);
+        else next.add(option);
+        onChange(field.options?.map((o) => o.value).filter((v) => next.has(v)).join(',') ?? '');
+      };
+      return (
+        <div className="flex flex-wrap gap-2">
+          {field.options?.map((o) => (
+            <label key={o.value} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+              <input type="checkbox" checked={ticked.has(o.value)} onChange={() => toggle(o.value)} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/20" />
+              {o.label}
+            </label>
+          ))}
+        </div>
+      );
+    }
     case 'textarea':
       return <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={4} className={`${inputClasses} font-mono text-xs`} />;
     case 'secret':
@@ -75,7 +95,7 @@ export function SettingGroupCard({ group, settingsByKey, onSaved }: SettingGroup
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(!group.collapsible);
 
-  const stored = (key: string) => settingsByKey.get(key)?.settingValue ?? '';
+  const stored = (key: string) => settingsByKey.get(key)?.settingValue ?? group.fields.find((f) => f.key === key)?.defaultValue ?? '';
   const dirtyKeys = Object.keys(drafts).filter((key) => drafts[key] !== stored(key));
 
   const save = async () => {
@@ -125,6 +145,17 @@ export function SettingGroupCard({ group, settingsByKey, onSaved }: SettingGroup
             {group.fields.map((field) => {
               const value = drafts[field.key] ?? stored(field.key);
               const control = <FieldControl field={field} value={value} onChange={(v) => setDrafts((prev) => ({ ...prev, [field.key]: v }))} />;
+
+              if (field.type === 'checkboxes') {
+                // Not wrapped in a <label>: each checkbox has its own.
+                return (
+                  <div key={field.key}>
+                    <p className="text-sm text-gray-800 mb-2">{field.label}</p>
+                    {control}
+                    {field.help && <p className="text-xs text-gray-500 mt-2">{field.help}</p>}
+                  </div>
+                );
+              }
 
               return field.type === 'toggle' ? (
                 <div key={field.key} className={`flex items-center justify-between gap-4 ${toggleRows ? 'py-3' : ''}`}>

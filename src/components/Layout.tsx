@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { GoBackButton } from './GoBackButton';
 import { useAuth } from '../context/AuthContext';
+import { IdleLogout } from './IdleLogout';
 import { loadCurrencyDisplay, useCurrencyDisplay } from '../utils/money';
 
 export function Layout() {
@@ -34,6 +35,7 @@ export function Layout() {
           </div>
         </main>
       </div>
+      <IdleLogout />
     </div>
   );
 }

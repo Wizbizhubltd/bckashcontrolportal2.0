@@ -11,6 +11,7 @@ export type ChargeType =
   | 'LoanReschedulingFee'
   | 'OverdueMaturity'
   | 'EarlyRepayment'
+  | 'ApplicationFormFee'
   | 'SavingsActivation'
   | 'WithdrawalFee'
   | 'AnnualFee'
