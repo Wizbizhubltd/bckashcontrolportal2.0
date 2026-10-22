@@ -13,6 +13,7 @@ import {
   PencilIcon,
   PiggyBankIcon,
   PlayCircleIcon,
+  PrinterIcon,
   ShieldAlertIcon,
   ShieldCheckIcon,
   Trash2Icon,
@@ -44,7 +45,7 @@ type TabKey = (typeof TABS)[number]['key'];
 
 type Dialog = 'decline' | 'mark-safe' | 'deactivate' | 'close' | 'delete' | 'grant-edit' | 'refuse-edit' | 'approve-deletion' | 'reject-deletion' | null;
 
-function clientName(client: Pick<ClientDetail, 'displayName' | 'firstName' | 'middleName' | 'lastName'>): string {
+export function clientName(client: Pick<ClientDetail, 'displayName' | 'firstName' | 'middleName' | 'lastName'>): string {
   return [client.firstName, client.middleName, client.lastName].filter(Boolean).join(' ') || client.displayName || 'Unnamed client';
 }
 
@@ -250,6 +251,14 @@ export function ClientDetailPage() {
               <Trash2Icon size={16} /> Delete
             </button>
           )}
+          <a
+            href={`/clients/${client.id}/print`}
+            target="_blank"
+            rel="noreferrer"
+            className={`${buttonClass} ml-auto border border-gray-200 text-gray-700 hover:bg-gray-50`}
+          >
+            <PrinterIcon size={16} /> Generate client form
+          </a>
         </div>
       </section>
 

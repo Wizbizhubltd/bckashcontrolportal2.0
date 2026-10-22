@@ -19,6 +19,7 @@ import {
   UsersRoundIcon,
 } from 'lucide-react';
 import { Logo } from './Logo';
+import { ConfirmationModal } from './ConfirmationModal';
 import { useAuth } from '../context/AuthContext';
 import { pendingActionsApi } from '../api/pendingActionsApi';
 
@@ -72,7 +73,9 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     if (onLoanPage) setLoansOpen(true);
   }, [onLoanPage]);
 
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
   const handleLogout = () => {
+    setConfirmingLogout(false);
     logout();
     navigate('/login');
   };
@@ -162,18 +165,31 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       </div>
 
       <div className="p-4 border-t border-white/10">
-        <div onClick={handleLogout} className="group flex items-center px-2 py-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
-          <div className="w-10 h-10 rounded-full border-2 border-white/20 bg-white/10 text-white flex items-center justify-center text-xs font-heading font-bold">
-            {initials}
-          </div>
-
-          <div className="ml-3 flex-1 overflow-hidden">
-            <p className="text-sm font-heading font-bold text-white truncate">{user?.fullName || 'Signed in'}</p>
-            <p className="text-xs text-gray-300 truncate">{user?.user_type ?? user?.email}</p>
-          </div>
-          <span className="w-8 h-8 rounded-full bg-white/10 text-gray-300 flex items-center justify-center group-hover:bg-white/15 group-hover:text-accent transition-colors">
+        <div className="flex items-center gap-2">
+          {/* The name opens the user's own profile; only the icon signs out, after confirming. */}
+          <NavLink
+            to="/profile"
+            onClick={onMobileClose}
+            title="Your profile"
+            className={({ isActive }) => `flex flex-1 items-center overflow-hidden px-2 py-2 rounded-lg transition-colors ${isActive ? 'bg-white/10' : 'hover:bg-white/5'}`}
+          >
+            <div className="w-10 h-10 flex-shrink-0 rounded-full border-2 border-white/20 bg-white/10 text-white flex items-center justify-center text-xs font-heading font-bold">
+              {initials}
+            </div>
+            <div className="ml-3 flex-1 overflow-hidden">
+              <p className="text-sm font-heading font-bold text-white truncate">{user?.fullName || 'Signed in'}</p>
+              <p className="text-xs text-gray-300 truncate">{user?.user_type ?? user?.email}</p>
+            </div>
+          </NavLink>
+          <button
+            type="button"
+            onClick={() => setConfirmingLogout(true)}
+            title="Log out"
+            aria-label="Log out"
+            className="w-8 h-8 flex-shrink-0 rounded-full bg-white/10 text-gray-300 flex items-center justify-center hover:bg-white/15 hover:text-accent transition-colors"
+          >
             <LogOutIcon size={16} />
-          </span>
+          </button>
         </div>
       </div>
     </div>
@@ -198,6 +214,17 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       >
         {sidebarContent}
       </motion.div>
+
+      <ConfirmationModal
+        isOpen={confirmingLogout}
+        onClose={() => setConfirmingLogout(false)}
+        onConfirm={handleLogout}
+        title="Log out"
+        description="Are you sure you want to log out?"
+        icon={<LogOutIcon size={20} />}
+        confirmLabel="Log out"
+        confirmVariant="danger"
+      />
     </>
   );
 }

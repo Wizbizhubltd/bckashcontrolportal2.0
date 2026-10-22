@@ -17,6 +17,8 @@ interface AuthContextType {
   verifyOtp: (code: string) => Promise<void>;
   resendOtp: () => Promise<void>;
   logout: () => void;
+  /** Keeps the stored user in step after they edit their own profile. */
+  updateUser: (changes: Partial<UserData>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,6 +92,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPendingEmail(null);
   };
 
+  const updateUser = (changes: Partial<UserData>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...changes };
+      localStorage.setItem(USER_DATA_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -101,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         verifyOtp,
         resendOtp,
         logout,
+        updateUser,
       }}
     >
       {children}

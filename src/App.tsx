@@ -24,6 +24,7 @@ import { LoanApplicationDetailPage } from './pages/loan-applications/LoanApplica
 import { EditRequestsPage } from './pages/edit-requests/EditRequestsPage';
 import { GroupDetailPage } from './pages/clients/GroupDetailPage';
 import { ClientFormPage } from './pages/clients/ClientFormPage';
+import { ClientPrintPage } from './pages/clients/ClientPrintPage';
 import { GroupFormPage } from './pages/clients/GroupFormPage';
 import { SingleOnboardingPage } from './pages/onboarding/SingleOnboardingPage';
 import { GroupOnboardingPage } from './pages/onboarding/GroupOnboardingPage';
@@ -33,6 +34,7 @@ import { LoanTransactionsListPage } from './pages/loan-transactions/LoanTransact
 import { LoanApplicationsListPage } from './pages/loan-applications/LoanApplicationsListPage';
 import { DeletionRequestsPage } from './pages/deletion-requests/DeletionRequestsPage';
 import { PendingActionsPage } from './pages/pending-actions/PendingActionsPage';
+import { ProfilePage } from './pages/profile/ProfilePage';
 
 export function App() {
   return (
@@ -56,6 +58,8 @@ export function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
 
           <Route element={<ProtectedRoute />}>
+            {/* The printable client form has no portal chrome. */}
+            <Route path="/clients/:id/print" element={<ClientPrintPage />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<Dashboard />} />
 
@@ -78,6 +82,7 @@ export function App() {
               <Route path="deletion-requests" element={<DeletionRequestsPage />} />
               <Route path="edit-requests" element={<EditRequestsPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="profile" element={<ProfilePage />} />
 
               <Route path="pending-actions" element={<PendingActionsPage />} />
               <Route path="clients">
