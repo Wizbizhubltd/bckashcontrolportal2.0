@@ -23,6 +23,10 @@ import { LoanDetailPage } from './pages/loans/LoanDetailPage';
 import { LoanApplicationDetailPage } from './pages/loan-applications/LoanApplicationDetailPage';
 import { EditRequestsPage } from './pages/edit-requests/EditRequestsPage';
 import { GroupDetailPage } from './pages/clients/GroupDetailPage';
+import { ClientFormPage } from './pages/clients/ClientFormPage';
+import { GroupFormPage } from './pages/clients/GroupFormPage';
+import { SingleOnboardingPage } from './pages/onboarding/SingleOnboardingPage';
+import { GroupOnboardingPage } from './pages/onboarding/GroupOnboardingPage';
 import { LoansListPage } from './pages/loans/LoansListPage';
 import { LateLoansListPage } from './pages/loans/LateLoansListPage';
 import { LoanTransactionsListPage } from './pages/loan-transactions/LoanTransactionsListPage';
@@ -78,11 +82,15 @@ export function App() {
               <Route path="pending-actions" element={<PendingActionsPage />} />
               <Route path="clients">
                 <Route index element={<ClientsListPage />} />
+                <Route path="onboard" element={<SingleOnboardingPage />} />
                 <Route path=":id" element={<ClientDetailPage />} />
+                <Route path=":id/edit" element={<ClientFormPage />} />
               </Route>
               <Route path="groups">
                 <Route index element={<Navigate to="/clients?tab=groups" replace />} />
+                <Route path="onboard" element={<GroupOnboardingPage />} />
                 <Route path=":id" element={<GroupDetailPage />} />
+                <Route path=":id/edit" element={<GroupFormPage />} />
               </Route>
               <Route path="loans">
                 <Route index element={<LoansListPage />} />

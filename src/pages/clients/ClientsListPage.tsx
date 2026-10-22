@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ContactIcon, SearchIcon, ShieldAlertIcon, ShieldCheckIcon, UsersIcon } from 'lucide-react';
+import { ContactIcon, SearchIcon, ShieldAlertIcon, ShieldCheckIcon, UserPlusIcon, UsersIcon, UsersRoundIcon } from 'lucide-react';
 import { clientsApi, type ClientListItem, type ClientRiskDetail, type ClientStatus } from '../../api/clientsApi';
 import { groupsApi } from '../../api/groupsApi';
 import type { BulkActionResult } from '../../api/types';
@@ -146,9 +146,25 @@ export function ClientsListPage() {
 
   return (
     <div>
-      <div className="mb-4">
-        <h1 className="text-xl font-heading font-bold text-primary">Clients</h1>
-        <p className="text-sm text-gray-500 mt-1">Every client account and savings group across the network.</p>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-heading font-bold text-primary">Clients</h1>
+          <p className="text-sm text-gray-500 mt-1">Every client account and savings group across the network.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => navigate('/groups/onboard')}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <UsersRoundIcon size={16} /> Onboard group
+          </button>
+          <button
+            onClick={() => navigate('/clients/onboard')}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary/90"
+          >
+            <UserPlusIcon size={16} /> Onboard client
+          </button>
+        </div>
       </div>
 
       <div role="tablist" className="flex border-b border-gray-200 mb-4">

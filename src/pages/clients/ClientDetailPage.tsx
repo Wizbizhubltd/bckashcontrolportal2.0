@@ -10,6 +10,7 @@ import {
   LandmarkIcon,
   LockIcon,
   PauseCircleIcon,
+  PencilIcon,
   PiggyBankIcon,
   PlayCircleIcon,
   ShieldAlertIcon,
@@ -51,7 +52,8 @@ function clientName(client: Pick<ClientDetail, 'displayName' | 'firstName' | 'mi
  * A client's page, laid out as in the office portal — photo, key details and statuses, then tabs for
  * their overview and documentation, groups, loans and audit trail — with the super admin's actions:
  * approving, declining and marking safe, reviewing edit and deletion requests, and changing status.
- * Documentation is read-only here; the staff member who onboarded the client changes it.
+ * The super admin can also edit the profile at any time (recorded in the audit trail); documentation
+ * stays with the staff member who onboarded the client, or the marketer they were assigned to.
  */
 export function ClientDetailPage() {
   const navigate = useNavigate();
@@ -210,6 +212,9 @@ export function ClientDetailPage() {
           {client.status === 'Pending' && !client.isHighRisk && blockers.length > 0 && (
             <span className="inline-flex items-center rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">To approve, the client needs {blockers.join(' and ')}.</span>
           )}
+          <button onClick={() => navigate(`/clients/${client.id}/edit`)} className={`${buttonClass} border border-gray-200 text-gray-700 hover:bg-gray-50`}>
+            <PencilIcon size={16} /> Edit details
+          </button>
           {actions?.canApprove && (
             <button onClick={() => void run(() => clientsApi.approve(client.id), `${name} approved.`)} className={`${buttonClass} bg-emerald-600 text-white hover:bg-emerald-700`}>
               <CheckCircleIcon size={16} /> Approve
@@ -271,7 +276,7 @@ export function ClientDetailPage() {
           {tab === 'groups' && <GroupsTab clientId={client.id} />}
           {tab === 'loans' && <LoansTab clientId={client.id} />}
           {tab === 'savings' && <SavingsSection clientId={client.id} onChange={() => setSavingsVersion((v) => v + 1)} />}
-          {tab === 'audit' && <AuditTab clientId={client.id} />}
+          {tab === 'audit' && <AuditTimeline load={() => clientsApi.audit(client.id)} recordKey={client.id} />}
         </div>
       </section>
 
@@ -583,8 +588,9 @@ function describeNotes(notes: string | null): string | null {
   }
 }
 
-function AuditTab({ clientId }: { clientId: number }) {
-  const { data, failed } = useLoad<ClientAuditEntry[]>(() => clientsApi.audit(clientId), [clientId]);
+/** A client's or group's audit trail, newest first. */
+export function AuditTimeline({ load, recordKey }: { load: () => Promise<ClientAuditEntry[]>; recordKey: number }) {
+  const { data, failed } = useLoad<ClientAuditEntry[]>(load, [recordKey]);
   if (failed) return <Empty>Couldn't load the audit trail.</Empty>;
   if (!data) return <Empty>Loading…</Empty>;
   if (data.length === 0) return <Empty>Nothing recorded yet.</Empty>;
