@@ -196,6 +196,100 @@ export const biometricsApi = {
   },
 };
 
+export interface BvnFieldComparison {
+  field: string;
+  given: string | null;
+  fromBvn: string | null;
+  matches: boolean;
+}
+
+export interface BvnCheck {
+  verificationId: number;
+  matches: boolean;
+  comparisons: BvnFieldComparison[];
+  fromBvn: {
+    firstName: string | null;
+    middleName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    birthDate: string | null;
+    gender: string | null;
+    /** Base64 JPEG from the BVN record, when the provider sends one. */
+    photo: string | null;
+  };
+}
+
+/** One client in an onboarding request; `detailsSource`/`overrideReason` only matter when the BVN didn't match. */
+export interface OnboardClientInput {
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  bvn: string;
+  bvnVerificationId: number;
+  detailsSource: 'bvn' | 'client' | null;
+  overrideReason: string | null;
+}
+
+export interface OnboardingResult {
+  groupId: number | null;
+  clients: { id: number; accountNo: string | null; displayName: string | null; isHighRisk: boolean }[];
+}
+
+/** Where a super admin's onboarded clients go: an office, and the marketer there who manages them. */
+export interface OnboardingAssignment {
+  officeId: number;
+  marketerId: number;
+}
+
+/**
+ * The API's field-level onboarding errors: keys are "group", "office", "marketer", "members", or
+ * "members[i]" for the i-th client.
+ */
+export function onboardingErrors(error: unknown): Record<string, string> {
+  const data = (error as { responseData?: { errors?: Record<string, string> } } | undefined)?.responseData;
+  return data?.errors ?? {};
+}
+
+/** A client's whole editable record, as GET /clients/{id} returns it. */
+export interface ClientRecord {
+  id: number;
+  bvn: string | null;
+  countryId: number | null;
+  officeId: number | null;
+  staffId: number | null;
+  referredById: number | null;
+  externalId: string | null;
+  title: string | null;
+  firstName: string | null;
+  middleName: string | null;
+  lastName: string | null;
+  incorporationNumber: string | null;
+  displayName: string | null;
+  mobile: string | null;
+  phone: string | null;
+  email: string | null;
+  gender: string | null;
+  clientType: string | null;
+  maritalStatus: string | null;
+  dob: string | null;
+  street: string | null;
+  ward: string | null;
+  district: string | null;
+  region: string | null;
+  address: string | null;
+  joinedDate: string | null;
+  occupation: string | null;
+  postalCode: string | null;
+  country: string | null;
+  state: string | null;
+  city: string | null;
+  businessAddress: string | null;
+  nationality: string | null;
+}
+
+/** The body of PUT /clients/{id}: every field is written, so send the ones you don't change as loaded. */
+export type UpdateClientInput = Omit<ClientRecord, 'id'> & { fullName: string | null; picture: null };
+
 export const GROUP_ROLE_LABELS: Record<string, string> = {
   leader: 'Leader',
   assistant: 'Assistant',
@@ -241,6 +335,33 @@ export const clientsApi = {
 
   async detail(id: number): Promise<ClientDetail> {
     return (await apiClient.get<ClientDetail>(`/clients/${id}`)).data;
+  },
+
+  async record(id: number): Promise<ClientRecord> {
+    return (await apiClient.get<ClientRecord>(`/clients/${id}`)).data;
+  },
+
+  /** A super admin's edit goes straight through — no edit privilege, no return to pending — and is recorded in the audit trail. */
+  async update(id: number, input: UpdateClientInput): Promise<void> {
+    await apiClient.put(`/clients/${id}`, input);
+  },
+
+  /** Looks the BVN up with the verification provider; the result's `verificationId` goes back with the client when they're onboarded. */
+  async checkBvn(bvn: string, fullName: string, phone: string | null): Promise<BvnCheck> {
+    return (await apiClient.post<BvnCheck>('/onboarding/bvn-check', { bvn, fullName, phone })).data;
+  },
+
+  async onboardClient(assignment: OnboardingAssignment, client: OnboardClientInput): Promise<OnboardingResult> {
+    return (await apiClient.post<OnboardingResult>('/onboarding/clients', { ...assignment, client })).data;
+  },
+
+  /** At least three members; the first three become the group's leader, assistant and organizer. */
+  async onboardGroup(
+    assignment: OnboardingAssignment,
+    group: { name: string; phone: string | null; email: string | null; address: string | null },
+    members: OnboardClientInput[],
+  ): Promise<OnboardingResult> {
+    return (await apiClient.post<OnboardingResult>('/onboarding/groups', { ...assignment, group, members })).data;
   },
 
   async groups(id: number): Promise<ClientGroupMembership[]> {

@@ -1,6 +1,6 @@
 import apiClient from './apiClient';
 import type { BulkActionResult, PagedResult } from './types';
-import type { ClientStatus } from './clientsApi';
+import type { ClientAuditEntry, ClientStatus } from './clientsApi';
 
 export type GroupStatus = 'Pending' | 'Active' | 'Inactive' | 'Declined' | 'Closed';
 
@@ -31,12 +31,23 @@ export interface GroupProfile {
   inactiveReason: string | null;
   closedReason: string | null;
   declinedReason: string | null;
+  externalId: string | null;
   mobile: string | null;
   phone: string | null;
   email: string | null;
+  street: string | null;
+  ward: string | null;
+  district: string | null;
+  region: string | null;
   address: string | null;
   notes: string | null;
 }
+
+/** The body of PUT /groups/{id}: every field is written, so send the ones you don't change as loaded. */
+export type UpdateGroupInput = Pick<
+  GroupProfile,
+  'officeId' | 'name' | 'externalId' | 'staffId' | 'joinedDate' | 'mobile' | 'phone' | 'email' | 'street' | 'ward' | 'district' | 'region' | 'address' | 'notes'
+>;
 
 export interface GroupSummaryMember {
   clientId: number;
@@ -105,6 +116,15 @@ export const groupsApi = {
 
   async summary(id: number): Promise<GroupSummary> {
     return (await apiClient.get<GroupSummary>(`/groups/${id}/summary`)).data;
+  },
+
+  /** Recorded in the audit trail with every changed field. */
+  async update(id: number, input: UpdateGroupInput): Promise<void> {
+    await apiClient.put(`/groups/${id}`, input);
+  },
+
+  async audit(id: number): Promise<ClientAuditEntry[]> {
+    return (await apiClient.get<ClientAuditEntry[]>(`/groups/${id}/audit`)).data;
   },
 
   async disable(id: number, reason: string): Promise<void> {

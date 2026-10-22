@@ -7,7 +7,9 @@ import {
   CheckCircle2Icon,
   CrownIcon,
   HourglassIcon,
+  HistoryIcon,
   PauseCircleIcon,
+  PencilIcon,
   PlayCircleIcon,
   ShieldAlertIcon,
   Trash2Icon,
@@ -27,6 +29,7 @@ import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { OfficeScopedPickerModal } from '../../components/OfficeScopedPickerModal';
 import { formatMoney } from '../../utils/money';
 import { formatDate, humanize, initials } from '../../utils/format';
+import { AuditTimeline } from './ClientDetailPage';
 
 type Dialog = 'disable' | 'close' | 'delete' | 'reassign' | 'approve-deletion' | 'reject-deletion' | null;
 
@@ -34,8 +37,9 @@ const count = new Intl.NumberFormat('en-NG');
 
 /**
  * A group's page, laid out as in the office portal — loan totals, member counts, the roster and loan
- * records — with the super admin's actions: disabling, enabling or closing the group, handing it to
- * another marketer, deleting a never-approved group, and reviewing a deletion request.
+ * records — with the super admin's actions: editing its details, disabling, enabling or closing the
+ * group, handing it to another marketer, deleting a never-approved group, and reviewing a deletion
+ * request. Its audit trail is at the foot of the page.
  */
 export function GroupDetailPage() {
   const navigate = useNavigate();
@@ -180,6 +184,9 @@ export function GroupDetailPage() {
         </dl>
 
         <div className="mt-5 flex flex-wrap gap-2 border-t border-gray-100 pt-5">
+          <button onClick={() => navigate(`/groups/${group.id}/edit`)} className={`${buttonClass} border border-gray-200 text-gray-700 hover:bg-gray-50`}>
+            <PencilIcon size={16} /> Edit details
+          </button>
           {group.status !== 'Closed' && group.status !== 'Declined' && (
             <button onClick={() => setDialog('reassign')} className={`${buttonClass} border border-gray-200 text-gray-700 hover:bg-gray-50`}>
               <UserCogIcon size={16} /> Reassign to a marketer
@@ -326,6 +333,15 @@ export function GroupDetailPage() {
             </table>
           </div>
         )}
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <h2 className="flex items-center gap-2 border-b border-gray-100 px-5 py-4 font-heading text-sm font-semibold text-gray-800">
+          <HistoryIcon size={16} /> Audit trail
+        </h2>
+        <div className="p-6">
+          <AuditTimeline load={() => groupsApi.audit(group.id)} recordKey={group.id} />
+        </div>
       </section>
 
       {dialog === 'reassign' && (
