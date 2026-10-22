@@ -128,6 +128,43 @@ export interface ClientDetail {
   currentEditRequest: ClientEditRequest | null;
   /** The client's loan or application still open, e.g. "Loan LN123 is still running." — null when none. */
   activeLoan: string | null;
+  externalId: string | null;
+  businessAddress: string | null;
+  nationality: string | null;
+  /** The account officer (the assigned marketer). */
+  staffName: string | null;
+  createdAt: string | null;
+}
+
+/** Everything the printed membership/loan form needs besides the client record. */
+export interface ClientLoanForm {
+  staffName: string | null;
+  /** From the client's latest loan application, or their latest loan. */
+  proposedLoanAmount: number | null;
+  loanTerm: number | null;
+  loanTermType: string | null;
+  loanProductName: string | null;
+  nin: string | null;
+  /** The application form fee in force now; null when switched off. */
+  formFee: number | null;
+  groupId: number | null;
+  groupName: string | null;
+  groupMembers: { clientId: number; name: string | null; role: string | null }[];
+}
+
+/** A guarantor or reference. */
+export interface ClientContact {
+  id: number;
+  kind: 'guarantor' | 'reference';
+  fullName: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  relationship: string | null;
+  occupation: string | null;
+  gender: string | null;
+  hasPhoto: boolean;
+  createdAt: string | null;
 }
 
 export type GroupStatus = 'Pending' | 'Active' | 'Inactive' | 'Declined' | 'Closed';
@@ -366,6 +403,24 @@ export const clientsApi = {
 
   async groups(id: number): Promise<ClientGroupMembership[]> {
     return (await apiClient.get<ClientGroupMembership[]>(`/clients/${id}/groups`)).data;
+  },
+
+  async loanForm(id: number): Promise<ClientLoanForm> {
+    return (await apiClient.get<ClientLoanForm>(`/clients/${id}/loan-form`)).data;
+  },
+
+  async contacts(id: number, kind: 'guarantors' | 'references'): Promise<ClientContact[]> {
+    return (await apiClient.get<ClientContact[]>(`/clients/${id}/${kind}`)).data;
+  },
+
+  /** A guarantor's or reference's passport photo as an object URL (the endpoint needs the auth header); null when there's none. */
+  async contactPhotoUrl(clientId: number, kind: 'guarantors' | 'references', contactId: number): Promise<string | null> {
+    try {
+      const response = await apiClient.get<Blob>(`/clients/${clientId}/${kind}/${contactId}/photo`, { responseType: 'blob' });
+      return URL.createObjectURL(response.data);
+    } catch {
+      return null;
+    }
   },
 
   async audit(id: number): Promise<ClientAuditEntry[]> {

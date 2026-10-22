@@ -79,6 +79,27 @@ export interface StaffListFilters {
   pageSize?: number;
 }
 
+/** The signed-in user's edit of their own record — the API keeps their role, office and email as they are. */
+export interface UpdateProfileInput {
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  gender: Gender;
+  address: string | null;
+  dateOfBirth: string | null;
+  nextOfKinName: string | null;
+  nextOfKinPhone: string | null;
+  nextOfKinRelationship: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
+}
+
+export interface Bank {
+  name: string;
+  category: string;
+}
+
 /** A super admin's edit of a staff member's whole record. Office, role, class and status have their own actions. */
 export interface UpdateStaffRecordInput {
   email: string;
@@ -152,6 +173,19 @@ export const usersApi = {
   async me(): Promise<StaffUser> {
     const response = await apiClient.get<StaffUser>('/users/me');
     return response.data;
+  },
+
+  async updateMyProfile(input: UpdateProfileInput): Promise<StaffUser> {
+    return (await apiClient.put<StaffUser>('/users/me/profile', input)).data;
+  },
+
+  /** Fails with the API's reason (wrong current password, too short, unchanged). */
+  async changeMyPassword(currentPassword: string, newPassword: string): Promise<void> {
+    await apiClient.post('/auth/password/change', { currentPassword, newPassword });
+  },
+
+  async banks(): Promise<Bank[]> {
+    return (await apiClient.get<Bank[]>('/banks')).data;
   },
 
   async create(input: CreateStaffInput): Promise<StaffUser> {

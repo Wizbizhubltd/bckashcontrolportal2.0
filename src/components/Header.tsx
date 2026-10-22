@@ -14,6 +14,7 @@ const TITLES: { prefix: string; title: string }[] = [
   { prefix: '/staff', title: 'Staff Directory' },
   { prefix: '/super-admins', title: 'Super Admins' },
   { prefix: '/settings', title: 'Rules & Settings' },
+  { prefix: '/profile', title: 'My Profile' },
   { prefix: '/', title: 'Dashboard' },
 ];
 
