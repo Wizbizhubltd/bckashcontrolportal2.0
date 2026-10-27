@@ -14,6 +14,7 @@ import {
   ShieldAlertIcon,
   Trash2Icon,
   UserCogIcon,
+  UserPlusIcon,
   UsersIcon,
   UsersRoundIcon,
   WalletIcon,
@@ -30,8 +31,9 @@ import { OfficeScopedPickerModal } from '../../components/OfficeScopedPickerModa
 import { formatMoney } from '../../utils/money';
 import { formatDate, humanize, initials } from '../../utils/format';
 import { AuditTimeline } from './ClientDetailPage';
+import { AddGroupMemberModal } from './AddGroupMemberModal';
 
-type Dialog = 'disable' | 'close' | 'delete' | 'reassign' | 'approve-deletion' | 'reject-deletion' | null;
+type Dialog = 'add-member' | 'disable' | 'close' | 'delete' | 'reassign' | 'approve-deletion' | 'reject-deletion' | null;
 
 const count = new Intl.NumberFormat('en-NG');
 
@@ -107,6 +109,8 @@ export function GroupDetailPage() {
   const name = group.name ?? `Group #${group.id}`;
   const buttonClass = 'inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors';
   const closable = group.status === 'Pending' || group.status === 'Active' || group.status === 'Inactive';
+  // Only a pending or active group takes new members.
+  const takesMembers = group.status === 'Pending' || group.status === 'Active';
 
   const loadMarketers = async (office: number) => {
     const marketers = await usersApi.list({ userType: 'marketer', officeId: office, pageSize: 100 });
@@ -187,6 +191,11 @@ export function GroupDetailPage() {
           <button onClick={() => navigate(`/groups/${group.id}/edit`)} className={`${buttonClass} border border-gray-200 text-gray-700 hover:bg-gray-50`}>
             <PencilIcon size={16} /> Edit details
           </button>
+          {takesMembers && (
+            <button onClick={() => setDialog('add-member')} className={`${buttonClass} bg-primary text-white hover:bg-primary/90`}>
+              <UserPlusIcon size={16} /> Add Member
+            </button>
+          )}
           {group.status !== 'Closed' && group.status !== 'Declined' && (
             <button onClick={() => setDialog('reassign')} className={`${buttonClass} border border-gray-200 text-gray-700 hover:bg-gray-50`}>
               <UserCogIcon size={16} /> Reassign to a marketer
@@ -343,6 +352,21 @@ export function GroupDetailPage() {
           <AuditTimeline load={() => groupsApi.audit(group.id)} recordKey={group.id} />
         </div>
       </section>
+
+      {dialog === 'add-member' && (
+        <AddGroupMemberModal
+          groupId={group.id}
+          groupName={name}
+          officeId={group.officeId}
+          memberIds={summary.members.map((m) => m.clientId)}
+          onAdded={(memberName) => {
+            setDialog(null);
+            toast.success(`${memberName} added to ${name}.`);
+            void load();
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
 
       {dialog === 'reassign' && (
         <OfficeScopedPickerModal
