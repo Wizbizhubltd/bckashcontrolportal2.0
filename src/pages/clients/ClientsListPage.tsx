@@ -193,7 +193,7 @@ export function ClientsListPage() {
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name"
+                  placeholder="Search by name or BVN"
                   className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                 />
               </div>
