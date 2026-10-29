@@ -1,15 +1,17 @@
-import { type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import toast from 'react-hot-toast';
-import { CheckCircle2Icon, DownloadIcon, FileTextIcon, IdCardIcon, ReceiptIcon, ShieldCheckIcon, XCircleIcon, AlertTriangleIcon, type LucideIcon } from 'lucide-react';
+import { CheckCircle2Icon, DownloadIcon, FileTextIcon, IdCardIcon, ReceiptIcon, ScanFaceIcon, ShieldCheckIcon, XCircleIcon, AlertTriangleIcon, type LucideIcon } from 'lucide-react';
 import apiClient from '../../api/apiClient';
-import { clientsApi, type ClientBiometrics } from '../../api/clientsApi';
+import { clientsApi, type ClientBiometrics, type FaceCapture } from '../../api/clientsApi';
+import { FaceCaptureModal } from '../../components/FaceCaptureModal';
 import { PassportPhoto } from '../../components/PassportPhoto';
 import { formatDate } from '../../utils/format';
 import { useLoad } from '../../hooks/useLoad';
 
 /**
  * A client's onboarding documentation, read-only: only the staff member who onboarded the client
- * changes it, from the office portal.
+ * changes it, from the office portal. The one exception is the face of a client approved before face
+ * capture came in and never enrolled, which a super admin can begin enrolling here.
  */
 
 export function Empty({ children }: { children: ReactNode }) {
@@ -25,10 +27,17 @@ function Row({ label, value }: { label: string; value: string | null | undefined
   );
 }
 
-export function BiometricsView({ clientId, clientName }: { clientId: number; clientName: string }) {
-  const { data, failed } = useLoad<ClientBiometrics>(() => clientsApi.biometrics(clientId), [clientId]);
+export function BiometricsView({ clientId, clientName, onEnrolled }: { clientId: number; clientName: string; onEnrolled: () => void }) {
+  const [version, setVersion] = useState(0);
+  const [capturing, setCapturing] = useState(false);
+  const { data, failed } = useLoad<ClientBiometrics>(() => clientsApi.biometrics(clientId), [clientId, version]);
   if (failed) return <Empty>Couldn't load the client's biometrics.</Empty>;
   if (!data) return <Empty>Loading…</Empty>;
+
+  const finished = (capture: FaceCapture) => {
+    setVersion((v) => v + 1);
+    if (capture.status === 'passed' && capture.purpose === 'enrollment') onEnrolled();
+  };
 
   return (
     <div className="space-y-6">
@@ -47,7 +56,17 @@ export function BiometricsView({ clientId, clientName }: { clientId: number; cli
               ? `Captured ${formatDate(data.enrollment.completedAt, true)} by ${data.enrollment.capturedByName ?? 'unknown'} · liveness ${data.enrollment.livenessConfidence?.toFixed(1) ?? '—'}%`
               : `No face on record yet. Loans need a ${data.faceMatchThreshold}% face match against it before disbursement.`}
           </p>
+          {!data.enrolled && !data.canEnroll && data.enrollBlockedReason && <p className="text-xs text-gray-400">{data.enrollBlockedReason}</p>}
         </div>
+        {data.canEnroll && (
+          <button
+            onClick={() => setCapturing(true)}
+            className="inline-flex items-center gap-2 self-start rounded-lg bg-accent px-4 py-2.5 text-sm font-heading font-bold text-white hover:bg-accent/90 sm:self-center"
+          >
+            <ScanFaceIcon size={18} />
+            {data.captures.some((c) => c.purpose === 'enrollment' && c.status === 'failed') ? 'Recapture face' : 'Begin enrollment'}
+          </button>
+        )}
       </div>
 
       <div>
@@ -95,6 +114,7 @@ export function BiometricsView({ clientId, clientName }: { clientId: number; cli
           </div>
         )}
       </div>
+      {capturing && <FaceCaptureModal clientId={clientId} clientName={clientName} purpose="enrollment" onClose={() => setCapturing(false)} onFinished={finished} />}
     </div>
   );
 }
