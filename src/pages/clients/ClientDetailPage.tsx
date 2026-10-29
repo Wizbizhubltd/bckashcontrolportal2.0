@@ -27,6 +27,7 @@ import { deletionRequestsApi, type DeletionRequest } from '../../api/deletionReq
 import { StatusBadge, type StatusType } from '../../components/StatusBadge';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { PassportPhoto } from '../../components/PassportPhoto';
+import { VerifyBvnModal } from '../../components/VerifyBvnModal';
 import { formatMoney } from '../../utils/money';
 import { formatDate } from '../../utils/format';
 import { BiometricsView, ContactsView, DocumentsView, Empty, NextOfKinView, NotesView } from './ClientDocumentation';
@@ -281,7 +282,7 @@ export function ClientDetailPage() {
         </div>
 
         <div className="p-6">
-          {tab === 'overview' && <OverviewTab client={client} />}
+          {tab === 'overview' && <OverviewTab client={client} onChanged={() => void load()} />}
           {tab === 'groups' && <GroupsTab clientId={client.id} />}
           {tab === 'loans' && <LoansTab clientId={client.id} />}
           {tab === 'savings' && <SavingsSection clientId={client.id} onChange={() => setSavingsVersion((v) => v + 1)} />}
@@ -440,9 +441,10 @@ const DOC_SECTIONS = [
 ] as const;
 type DocSection = (typeof DOC_SECTIONS)[number]['key'];
 
-function OverviewTab({ client }: { client: ClientDetail }) {
+function OverviewTab({ client, onChanged }: { client: ClientDetail; onChanged: () => void }) {
   const [section, setSection] = useState<DocSection>('biometrics');
   const address = [client.address, client.street, client.city, client.state, client.country].filter(Boolean).join(', ');
+  const [verifyingBvn, setVerifyingBvn] = useState(false);
 
   return (
     <div className="space-y-8">
@@ -472,7 +474,24 @@ function OverviewTab({ client }: { client: ClientDetail }) {
         <h2 className="mb-4 text-xs font-heading font-bold uppercase tracking-widest text-gray-400">BVN verification & risk</h2>
         <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
           <Detail label="BVN" value={client.bvn} />
-          <Detail label="Verified" value={client.bvnVerifiedAt ? formatDate(client.bvnVerifiedAt, true) : 'Not verified (onboarded before BVN checks)'} />
+          <Detail
+            label="Verified"
+            value={
+              client.bvnVerifiedAt ? (
+                formatDate(client.bvnVerifiedAt, true)
+              ) : (
+                <span className="flex flex-wrap items-center gap-2">
+                  Not verified (onboarded before BVN checks)
+                  <button
+                    onClick={() => setVerifyingBvn(true)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium text-white hover:bg-primary/90"
+                  >
+                    <BadgeCheckIcon size={13} /> Verify now
+                  </button>
+                </span>
+              )
+            }
+          />
           <Detail label="Details on file" value={client.bvnDetailsSource === 'client' ? "Client's own (differ from BVN)" : client.bvnDetailsSource === 'bvn' ? 'From the BVN record' : null} />
           <Detail label="Risk" value={client.isHighRisk ? 'High risk' : client.highRiskClearedAt ? `Marked safe ${formatDate(client.highRiskClearedAt)}` : 'Normal'} />
           {client.highRiskReason && <Detail label="Reason for keeping client's details" value={client.highRiskReason} />}
@@ -499,12 +518,13 @@ function OverviewTab({ client }: { client: ClientDetail }) {
           ))}
         </div>
 
-        {section === 'biometrics' && <BiometricsView clientId={client.id} clientName={clientName(client)} />}
+        {section === 'biometrics' && <BiometricsView clientId={client.id} clientName={clientName(client)} onEnrolled={onChanged} />}
         {section === 'documents' && <DocumentsView clientId={client.id} />}
         {(section === 'guarantors' || section === 'references') && <ContactsView key={section} clientId={client.id} kind={section} />}
         {section === 'next-of-kin' && <NextOfKinView clientId={client.id} />}
         {section === 'notes' && <NotesView clientId={client.id} />}
       </section>
+      {verifyingBvn && <VerifyBvnModal clientId={client.id} bvnOnFile={client.bvn} onClose={() => setVerifyingBvn(false)} onVerified={onChanged} />}
     </div>
   );
 }

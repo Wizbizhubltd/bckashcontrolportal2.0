@@ -7,6 +7,7 @@ import { groupsApi } from '../../api/groupsApi';
 import type { BulkActionResult } from '../../api/types';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { officesApi, type Office } from '../../api/officesApi';
+import { usersApi } from '../../api/usersApi';
 import { Pagination } from '../../components/Pagination';
 import { StatusBadge, type StatusType } from '../../components/StatusBadge';
 import { BulkActionMenu, BulkCheckbox, BulkSelectionBar } from '../../components/BulkActions';
@@ -17,9 +18,17 @@ import { GroupsTab } from './GroupsTab';
 
 const PAGE_SIZE = 15;
 
-type ClientBulkAction = 'move-to-group';
+type ClientBulkAction = 'move-to-group' | 'move-to-office';
 
-const BULK_ACTIONS = [{ value: 'move-to-group' as const, label: 'Move to a group' }];
+const BULK_ACTIONS = [
+  { value: 'move-to-group' as const, label: 'Move to a group' },
+  { value: 'move-to-office' as const, label: 'Move to new office/branch' },
+];
+
+const BULK_ACTION_LABELS: Record<ClientBulkAction, string> = {
+  'move-to-group': 'Move to group',
+  'move-to-office': 'Move to new office',
+};
 
 const TABS = [
   { key: 'clients', label: 'Clients', icon: ContactIcon },
@@ -54,6 +63,10 @@ export function ClientsListPage() {
   const [result, setResult] = useState<BulkActionResult | null>(null);
   /** Office of every client seen so far, so the group picker can start on the ticked clients' office. */
   const officeOf = useRef(new Map<number, number | null>());
+  /** Office of every marketer listed in the office picker, so a move knows the office of the marketer picked. */
+  const marketerOffice = useRef(new Map<number, number>());
+  /** The action whose result is showing — the selection (and its action) is cleared once it runs. */
+  const lastAction = useRef<ClientBulkAction | null>(null);
 
   useEffect(() => {
     void officesApi.list().then(setOffices).catch(() => undefined);
@@ -123,11 +136,20 @@ export function ClientsListPage() {
       .map((g) => ({ label: `${g.name || g.accountNo || `Group #${g.id}`} · ${g.memberCount} member${g.memberCount === 1 ? '' : 's'}`, value: String(g.id) }));
   };
 
-  const moveToGroup = async (groupId: string) => {
+  const loadMarketers = async (office: number) => {
+    const marketers = await usersApi.list({ userType: 'marketer', officeId: office, pageSize: 100 });
+    marketers.items.forEach((m) => marketerOffice.current.set(m.id, office));
+    return marketers.items
+      .filter((m) => !m.blocked)
+      .map((m) => ({ label: `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() || m.email, value: String(m.id) }));
+  };
+
+  const run = async (action: () => Promise<BulkActionResult>) => {
     setPickerOpen(false);
     setRunning(true);
+    lastAction.current = bulk.action;
     try {
-      setResult(await groupsApi.bulkMoveClients(Number(groupId), [...bulk.selected]));
+      setResult(await action());
       bulk.cancel();
       void load(page);
     } catch (error) {
@@ -135,6 +157,14 @@ export function ClientsListPage() {
     } finally {
       setRunning(false);
     }
+  };
+
+  const moveToGroup = (groupId: string) => run(() => groupsApi.bulkMoveClients(Number(groupId), [...bulk.selected]));
+
+  const moveToOffice = (marketerId: string) => {
+    const office = marketerOffice.current.get(Number(marketerId));
+    if (office === undefined) return;
+    void run(() => clientsApi.bulkTransfer([...bulk.selected], office, Number(marketerId)));
   };
 
   const officeName = (id: number | null) => offices.find((o) => o.id === id)?.name ?? '—';
@@ -223,7 +253,7 @@ export function ClientsListPage() {
 
           {bulk.selecting && (
             <BulkSelectionBar
-              actionLabel="Move to group"
+              actionLabel={bulk.action ? BULK_ACTION_LABELS[bulk.action] : ''}
               selectedCount={bulk.selected.size}
               totalCount={totalCount}
               noun="clients"
@@ -310,7 +340,7 @@ export function ClientsListPage() {
         </>
       )}
 
-      {pickerOpen && (
+      {pickerOpen && bulk.action === 'move-to-group' && (
         <OfficeScopedPickerModal
           title={`Move ${plural(bulk.selected.size)} to a group`}
           description="They leave their current group and join the one you pick. Clients with active loans, defaulters, and clients from another office stay where they are."
@@ -324,13 +354,27 @@ export function ClientsListPage() {
         />
       )}
 
+      {pickerOpen && bulk.action === 'move-to-office' && (
+        <OfficeScopedPickerModal
+          title={`Move ${plural(bulk.selected.size)} to a new office`}
+          description="Pick the new office/branch and the marketer there who will look after them. They leave their current group and take their open savings accounts along. Clients with an unsettled loan or pending application, defaulters, and clients already in that office stay where they are."
+          pickLabel="Marketer"
+          confirmLabel="Move clients"
+          offices={offices}
+          defaultOfficeId={null}
+          loadOptions={loadMarketers}
+          onConfirm={moveToOffice}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+
       {running && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
           <div className="rounded-xl bg-white px-6 py-4 text-sm text-gray-700 shadow-xl">Working…</div>
         </div>
       )}
 
-      {result && <BulkResultModal title="Move to group" result={result} done="were moved" noun={plural} onClose={() => setResult(null)} />}
+      {result && <BulkResultModal title={lastAction.current ? BULK_ACTION_LABELS[lastAction.current] : 'Move clients'} result={result} done="were moved" noun={plural} onClose={() => setResult(null)} />}
 
       <ConfirmationModal
         isOpen={!!reviewing}

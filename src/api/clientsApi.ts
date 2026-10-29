@@ -1,5 +1,5 @@
 import apiClient from './apiClient';
-import type { PagedResult } from './types';
+import type { BulkActionResult, PagedResult } from './types';
 
 export type ClientStatus = 'Pending' | 'Active' | 'Inactive' | 'Declined' | 'Closed';
 
@@ -214,6 +214,10 @@ export interface ClientBiometrics {
   enrolled: boolean;
   enrollment: FaceCapture | null;
   faceMatchThreshold: number;
+  /** Whether the signed-in user can capture the face now — for a super admin, only a client approved before face capture who was never enrolled. */
+  canEnroll: boolean;
+  /** Why the face can't be captured right now, when it can't. */
+  enrollBlockedReason: string | null;
   captures: FaceCapture[];
 }
 
@@ -350,6 +354,13 @@ export const editRequestsApi = {
   },
 };
 
+/**
+ * BVN checks wait on the provider (up to 30s, plus one retry after logging in again), so they get longer than the
+ * usual timeout — when the provider fails, the API's "network error from the BVN API provider" message reaches staff
+ * rather than a timeout of our own.
+ */
+const BVN_CHECK_TIMEOUT_MS = 90_000;
+
 export const clientsApi = {
   async list(filters: ClientListFilters): Promise<PagedResult<ClientListItem>> {
     const params = new URLSearchParams();
@@ -385,7 +396,7 @@ export const clientsApi = {
 
   /** Looks the BVN up with the verification provider; the result's `verificationId` goes back with the client when they're onboarded. */
   async checkBvn(bvn: string, fullName: string, phone: string | null): Promise<BvnCheck> {
-    return (await apiClient.post<BvnCheck>('/onboarding/bvn-check', { bvn, fullName, phone })).data;
+    return (await apiClient.post<BvnCheck>('/onboarding/bvn-check', { bvn, fullName, phone }, { timeout: BVN_CHECK_TIMEOUT_MS })).data;
   },
 
   async onboardClient(assignment: OnboardingAssignment, client: OnboardClientInput): Promise<OnboardingResult> {
@@ -474,5 +485,24 @@ export const clientsApi = {
   /** Clears a client's high-risk flag so a controller can approve them. */
   async markSafe(id: number, note: string | null): Promise<void> {
     await apiClient.post(`/clients/${id}/mark-safe`, { note });
+  },
+
+  /**
+   * Bulk action: moves the ticked clients to an office under a marketer there. They leave their group and take
+   * their open savings accounts along; clients with an open loan or application, and defaulters, are skipped.
+   */
+  async bulkTransfer(clientIds: number[], officeId: number, marketerId: number): Promise<BulkActionResult> {
+    const response = await apiClient.post<BulkActionResult>('/clients/bulk/transfer', { clientIds, officeId, marketerId });
+    return response.data;
+  },
+
+  /** "Verify now" for a client onboarded before BVN checks: looks up the BVN on file (or `bvn`, when none is) against their details. */
+  async checkExistingBvn(id: number, bvn: string | null): Promise<BvnCheck> {
+    return (await apiClient.post<BvnCheck>(`/clients/${id}/bvn-check`, { bvn }, { timeout: BVN_CHECK_TIMEOUT_MS })).data;
+  },
+
+  /** Marks the client's BVN verified from that lookup; when it didn't match, `detailsSource` says whose details to keep. */
+  async verifyExistingBvn(id: number, verificationId: number, detailsSource: 'bvn' | 'client' | null, overrideReason: string | null): Promise<void> {
+    await apiClient.post(`/clients/${id}/bvn-verification`, { verificationId, detailsSource, overrideReason });
   },
 };
