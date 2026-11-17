@@ -24,3 +24,9 @@ export function formatDate(value: string | null | undefined, withTime = false): 
     ? date.toLocaleString('en-NG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : date.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
 }
+
+/** "Reassigned by Ada Obi · 3 Nov 2026" for a client's or group's marketer — null if never reassigned. */
+export function reassignedNote(byName: string | null | undefined, at: string | null | undefined): string | null {
+  if (!at) return null;
+  return `Reassigned${byName ? ` by ${byName}` : ''} · ${formatDate(at)}`;
+}

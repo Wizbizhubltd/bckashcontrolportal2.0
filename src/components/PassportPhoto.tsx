@@ -2,8 +2,20 @@ import { useEffect, useState } from 'react';
 import { clientsApi } from '../api/clientsApi';
 import { initials } from '../utils/format';
 
-/** A client's passport photograph (their enrolled face capture), or an initials avatar when there's none. */
-export function PassportPhoto({ clientId, name, hasPhoto, className = 'h-28 w-24' }: { clientId: number; name: string; hasPhoto: boolean; className?: string }) {
+/** A client's passport photograph (their enrolled face capture, or a photo uploaded while face capture is off), or an initials avatar when there's none. Bump `version` to reload it after a new one is saved. */
+export function PassportPhoto({
+  clientId,
+  name,
+  hasPhoto,
+  version = 0,
+  className = 'h-28 w-24',
+}: {
+  clientId: number;
+  name: string;
+  hasPhoto: boolean;
+  version?: number;
+  className?: string;
+}) {
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,7 +34,7 @@ export function PassportPhoto({ clientId, name, hasPhoto, className = 'h-28 w-24
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [clientId, hasPhoto]);
+  }, [clientId, hasPhoto, version]);
 
   if (url) {
     return <img src={url} alt={`Passport photograph of ${name}`} className={`${className} flex-shrink-0 rounded-xl border border-gray-200 object-cover`} />;

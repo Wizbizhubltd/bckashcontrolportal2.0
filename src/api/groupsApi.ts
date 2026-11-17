@@ -85,6 +85,11 @@ export interface GroupSummary {
   canDelete: boolean;
   pendingDeletionRequest: boolean;
   createdByName: string | null;
+  /** The marketer in charge of the group now. */
+  staffName: string | null;
+  /** Who last reassigned it to another marketer, and when — null if it's never been reassigned. */
+  staffAssignedByName: string | null;
+  staffAssignedAt: string | null;
   officeName: string | null;
   loanRecords: GroupLoanRecord[];
 }

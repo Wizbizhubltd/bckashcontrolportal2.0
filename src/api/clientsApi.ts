@@ -112,6 +112,9 @@ export interface ClientDetail {
   declinedReason: string | null;
   closedReason: string | null;
   createdByName: string | null;
+  /** Who last reassigned it to another marketer, and when — null if it's never been reassigned. */
+  staffAssignedByName: string | null;
+  staffAssignedAt: string | null;
   activatedByName: string | null;
   bvnVerifiedAt: string | null;
   bvnDetailsSource: 'bvn' | 'client' | null;
@@ -219,6 +222,12 @@ export interface ClientBiometrics {
   /** Why the face can't be captured right now, when it can't. */
   enrollBlockedReason: string | null;
   captures: FaceCapture[];
+  /** Whether face capture is mandatory (Settings → Loan). */
+  required: boolean;
+  /** Whether the client has a profile picture — their enrolled face, or a passport photo uploaded while face capture is off. */
+  hasPhoto: boolean;
+  /** Whether the signed-in user can upload a passport photo now: face capture is off, the face isn't enrolled, and they may document the client. */
+  canUploadPhoto: boolean;
 }
 
 /** A live face capture (AWS Face Liveness), run from the browser against a session the API creates. */
@@ -266,7 +275,8 @@ export interface OnboardClientInput {
   email: string | null;
   phone: string | null;
   bvn: string;
-  bvnVerificationId: number;
+  /** Null onboards the client unverified — allowed only while BVN verification is switched off. */
+  bvnVerificationId: number | null;
   detailsSource: 'bvn' | 'client' | null;
   overrideReason: string | null;
 }
@@ -394,6 +404,11 @@ export const clientsApi = {
     await apiClient.put(`/clients/${id}`, input);
   },
 
+  /** Whether onboarding needs each client's BVN verified (control portal → Settings → Customer Onboarding). */
+  async onboardingRules(): Promise<{ bvnVerificationRequired: boolean }> {
+    return (await apiClient.get<{ bvnVerificationRequired: boolean }>('/onboarding/rules')).data;
+  },
+
   /** Looks the BVN up with the verification provider; the result's `verificationId` goes back with the client when they're onboarded. */
   async checkBvn(bvn: string, fullName: string, phone: string | null): Promise<BvnCheck> {
     return (await apiClient.post<BvnCheck>('/onboarding/bvn-check', { bvn, fullName, phone }, { timeout: BVN_CHECK_TIMEOUT_MS })).data;
@@ -432,6 +447,19 @@ export const clientsApi = {
     } catch {
       return null;
     }
+  },
+
+  /** Uploads (or replaces) the client's passport photo — only while face capture is off and their face isn't enrolled. JPG or PNG, at most 2 MB. */
+  async uploadPassportPhoto(clientId: number, file: File): Promise<void> {
+    const body = new FormData();
+    body.append('file', file);
+    await apiClient.post(`/clients/${clientId}/passport-photo`, body, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+
+  async uploadContactPhoto(clientId: number, kind: 'guarantors' | 'references', contactId: number, file: File): Promise<ClientContact> {
+    const body = new FormData();
+    body.append('file', file);
+    return (await apiClient.post<ClientContact>(`/clients/${clientId}/${kind}/${contactId}/photo`, body, { headers: { 'Content-Type': 'multipart/form-data' } })).data;
   },
 
   async audit(id: number): Promise<ClientAuditEntry[]> {
