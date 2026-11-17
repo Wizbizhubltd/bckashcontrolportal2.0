@@ -29,8 +29,11 @@ import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { PassportPhoto } from '../../components/PassportPhoto';
 import { VerifyBvnModal } from '../../components/VerifyBvnModal';
 import { formatMoney } from '../../utils/money';
-import { formatDate } from '../../utils/format';
-import { BiometricsView, ContactsView, DocumentsView, Empty, NextOfKinView, NotesView } from './ClientDocumentation';
+import { formatDate, reassignedNote } from '../../utils/format';
+import { BiometricsView, Empty } from './ClientDocumentation';
+import { DocumentsSection } from './documentation/DocumentsSection';
+import { ContactsSection } from './documentation/ContactsSection';
+import { SimpleCrudScreen } from '../../components/SimpleCrudScreen';
 import { useLoad } from '../../hooks/useLoad';
 import { useClientSavings } from '../../hooks/useClientSavings';
 import { SavingsSection } from './SavingsSection';
@@ -70,6 +73,7 @@ export function ClientDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [savingsVersion, setSavingsVersion] = useState(0);
+  const [photoVersion, setPhotoVersion] = useState(0);
   const savings = useClientSavings(clientId, savingsVersion);
 
   const load = async () => {
@@ -124,7 +128,7 @@ export function ClientDetailPage() {
     <div className="max-w-6xl space-y-6">
       <section className="rounded-2xl border border-gray-100 bg-white p-6">
         <div className="flex flex-col gap-6 lg:flex-row">
-          <PassportPhoto clientId={client.id} name={name} hasPhoto={client.hasPhoto} />
+          <PassportPhoto clientId={client.id} name={name} hasPhoto={client.hasPhoto} version={photoVersion} />
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -154,6 +158,7 @@ export function ClientDetailPage() {
               <Brief label="Active loan" value={client.activeLoan ?? 'None'} />
               <Brief label="Savings" value={savings ? formatMoney(savings.balance) : null} />
               <Brief label="Onboarded by" value={client.createdByName} />
+              <Brief label="Marketer" value={client.staffName} note={reassignedNote(client.staffAssignedByName, client.staffAssignedAt)} />
               <Brief label="Approved" value={client.activatedDate ? `${formatDate(client.activatedDate)}${client.activatedByName ? ` · ${client.activatedByName}` : ''}` : null} />
             </dl>
           </div>
@@ -282,7 +287,13 @@ export function ClientDetailPage() {
         </div>
 
         <div className="p-6">
-          {tab === 'overview' && <OverviewTab client={client} onChanged={() => void load()} />}
+          {tab === 'overview' && <OverviewTab
+              client={client}
+              onChanged={() => {
+                setPhotoVersion((v) => v + 1);
+                void load();
+              }}
+            />}
           {tab === 'groups' && <GroupsTab clientId={client.id} />}
           {tab === 'loans' && <LoansTab clientId={client.id} />}
           {tab === 'savings' && <SavingsSection clientId={client.id} onChange={() => setSavingsVersion((v) => v + 1)} />}
@@ -411,13 +422,14 @@ function Buttons({ children }: { children: ReactNode }) {
   return <div className="mt-3 flex gap-2">{children}</div>;
 }
 
-function Brief({ label, value }: { label: string; value: string | null | undefined }) {
+function Brief({ label, value, note }: { label: string; value: string | null | undefined; note?: string | null }) {
   return (
     <div className="min-w-0">
       <dt className="text-xs text-gray-400">{label}</dt>
       <dd className="mt-0.5 truncate font-medium text-gray-800" title={value ?? undefined}>
         {value || '—'}
       </dd>
+      {note && <dd className="mt-0.5 truncate text-xs text-gray-500" title={note}>{note}</dd>}
     </div>
   );
 }
@@ -445,6 +457,8 @@ function OverviewTab({ client, onChanged }: { client: ClientDetail; onChanged: (
   const [section, setSection] = useState<DocSection>('biometrics');
   const address = [client.address, client.street, client.city, client.state, client.country].filter(Boolean).join(', ');
   const [verifyingBvn, setVerifyingBvn] = useState(false);
+  // A super admin can do everything the onboarder can here; the API records each change in the audit trail.
+  const readOnly = !client.actions?.canEditDetails;
 
   return (
     <div className="space-y-8">
@@ -503,7 +517,13 @@ function OverviewTab({ client, onChanged }: { client: ClientDetail; onChanged: (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xs font-heading font-bold uppercase tracking-widest text-gray-400">Documentation</h2>
           <p className="inline-flex items-center gap-1 text-xs text-gray-400">
-            <LockIcon size={12} /> Read-only — {client.createdByName ?? 'the staff member who onboarded the client'} changes it from the office portal.
+            {readOnly ? (
+              <>
+                <LockIcon size={12} /> Read-only for your role.
+              </>
+            ) : (
+              'You can change everything here, as the staff member who onboarded the client can. Every change is recorded in the audit trail.'
+            )}
           </p>
         </div>
         <div className="mb-4 flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1">
@@ -519,10 +539,41 @@ function OverviewTab({ client, onChanged }: { client: ClientDetail; onChanged: (
         </div>
 
         {section === 'biometrics' && <BiometricsView clientId={client.id} clientName={clientName(client)} onEnrolled={onChanged} />}
-        {section === 'documents' && <DocumentsView clientId={client.id} />}
-        {(section === 'guarantors' || section === 'references') && <ContactsView key={section} clientId={client.id} kind={section} />}
-        {section === 'next-of-kin' && <NextOfKinView clientId={client.id} />}
-        {section === 'notes' && <NotesView clientId={client.id} />}
+        {section === 'documents' && <DocumentsSection clientId={client.id} readOnly={readOnly} />}
+        {(section === 'guarantors' || section === 'references') && (
+          <ContactsSection key={section} clientId={client.id} kind={section} readOnly={readOnly} onChange={onChanged} />
+        )}
+        {section === 'next-of-kin' && (
+          <SimpleCrudScreen<{ id: number; clientRelationshipId: number | null; firstName: string | null; lastName: string | null; mobile: string | null; email: string | null; notes: string | null }>
+            key={section}
+            title="Next of kin"
+            endpoint={`/clients/${client.id}/next-of-kin`}
+            readOnly={readOnly}
+            columns={[
+              { key: 'firstName', label: 'First Name' },
+              { key: 'lastName', label: 'Last Name' },
+              { key: 'mobile', label: 'Mobile' },
+            ]}
+            fields={[
+              { key: 'clientRelationshipId', label: 'Relationship Type ID', type: 'number' },
+              { key: 'firstName', label: 'First Name', type: 'text' },
+              { key: 'lastName', label: 'Last Name', type: 'text' },
+              { key: 'mobile', label: 'Mobile', type: 'tel' },
+              { key: 'email', label: 'Email', type: 'text' },
+              { key: 'notes', label: 'Notes', type: 'textarea' },
+            ]}
+            emptyItem={{ clientRelationshipId: null, firstName: '', lastName: '', mobile: '', email: '', notes: '' }}
+          />
+        )}
+        {section === 'notes' && (
+          <SimpleCrudScreen<{ id: number; notes: string | null }>
+            title="Notes"
+            endpoint={`/clients/${client.id}/notes`}
+            columns={[{ key: 'notes', label: 'Note' }]}
+            fields={[{ key: 'notes', label: 'Note', type: 'textarea' }]}
+            emptyItem={{ notes: '' }}
+          />
+        )}
       </section>
       {verifyingBvn && <VerifyBvnModal clientId={client.id} bvnOnFile={client.bvn} onClose={() => setVerifyingBvn(false)} onVerified={onChanged} />}
     </div>

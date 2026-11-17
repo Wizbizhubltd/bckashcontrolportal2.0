@@ -304,6 +304,20 @@ export const SETTINGS_TABS: SettingsTab[] = [
     description: 'How customers join, and what they receive when they do.',
     groups: [
       {
+        title: 'BVN verification',
+        description: 'Whether staff must verify each client’s BVN with the verification provider before onboarding them — in both portals, for single clients and groups.',
+        enforced: true,
+        fields: [
+          {
+            key: 'bvn_verification_required',
+            label: 'BVN verification mandatory',
+            help: 'When on, a client can only be onboarded once their BVN has been checked with the provider. When off, a BVN is still entered (11 digits, not already on the platform) and staff can still verify it, but onboarding doesn’t wait on it — unverified clients keep the details as entered and can be verified later with “Verify now” on their record.',
+            type: 'toggle',
+            defaultValue: '1',
+          },
+        ],
+      },
+      {
         title: 'Registration',
         fields: [{ key: 'allow_self_registration', label: 'Customers can sign up themselves', help: 'When off, only staff can create customer records.', type: 'toggle' }],
       },

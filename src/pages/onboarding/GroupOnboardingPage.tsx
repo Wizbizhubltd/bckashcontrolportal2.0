@@ -5,7 +5,7 @@ import { ArrowLeftIcon, ArrowRightIcon, LoaderIcon, PlusIcon, UsersRoundIcon } f
 import { clientsApi, onboardingErrors, GROUP_ROLE_LABELS } from '../../api/clientsApi';
 import { sanitizePhoneInput, PHONE_MAX_DIGITS } from '../../utils/phone';
 import { BvnVerificationCard, ClientDetailsFields, Stepper, detailsProblem, isReady, toInput } from './OnboardingParts';
-import { useOnboardingDrafts } from './useOnboardingDrafts';
+import { useBvnVerificationRequired, useOnboardingDrafts } from './useOnboardingDrafts';
 import { AssignmentFields, EMPTY_ASSIGNMENT, assignmentProblem } from './AssignmentFields';
 
 const MIN_MEMBERS = 3;
@@ -21,6 +21,8 @@ const roleFor = (index: number) => GROUP_ROLE_LABELS[ROLES[index] ?? 'member'];
  */
 export function GroupOnboardingPage() {
   const navigate = useNavigate();
+  const bvnRequired = useBvnVerificationRequired();
+  const verificationRequired = bvnRequired !== false;
   const clients = useOnboardingDrafts(MIN_MEMBERS);
   const [step, setStep] = useState(0);
   const [attempted, setAttempted] = useState(false);
@@ -30,14 +32,15 @@ export function GroupOnboardingPage() {
 
   // Entering the verification step checks every client not yet checked.
   useEffect(() => {
-    if (step === 2) void clients.verifyPending();
+    // While BVN verification is optional, nothing is checked unless the staff member asks.
+    if (step === 2 && verificationRequired) void clients.verifyPending();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
+  }, [step, verificationRequired]);
 
   const groupProblem = !group.name.trim() ? 'The group needs a name.' : assignmentProblem(assignment);
   const detailsOk = clients.drafts.length >= MIN_MEMBERS && clients.drafts.every((d) => !detailsProblem(d));
   const duplicateBvn = new Set(clients.drafts.map((d) => d.bvn)).size !== clients.drafts.length;
-  const allReady = clients.drafts.every(isReady);
+  const allReady = bvnRequired !== null && clients.drafts.every((d) => isReady(d, verificationRequired));
 
   const next = () => {
     setAttempted(true);
@@ -157,7 +160,10 @@ export function GroupOnboardingPage() {
       {step === 2 && (
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
-            Each client's BVN is checked with the verification provider. Where the BVN record differs from what you entered, choose whose details to keep.
+            {verificationRequired
+              ? "Each client's BVN is checked with the verification provider."
+              : 'BVN verification is optional — clients not verified are onboarded unverified and can be verified later from their record.'}{' '}
+            Where the BVN record differs from what you entered, choose whose details to keep.
           </p>
           {clients.drafts.map((draft, index) => (
             <BvnVerificationCard
@@ -165,6 +171,7 @@ export function GroupOnboardingPage() {
               draft={draft}
               heading={`Client ${index + 1}`}
               badge={roleFor(index)}
+              optional={!verificationRequired}
               onRetry={() => void clients.verify(draft)}
               onChoose={(source) => clients.choose(draft.key, source)}
               onReason={(reason) => clients.setReason(draft.key, reason)}
@@ -192,7 +199,7 @@ export function GroupOnboardingPage() {
             type="button"
             onClick={() => void submit()}
             disabled={!allReady || submitting}
-            title={allReady ? undefined : 'Every client needs a verified BVN, and a choice where their details differ.'}
+            title={allReady ? undefined : verificationRequired ? 'Every client needs a verified BVN, and a choice where their details differ.' : 'Wait for any BVN check to finish, and make a choice where details differ.'}
             className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2 text-sm font-heading font-bold text-white hover:bg-accent/90 disabled:opacity-50"
           >
             {submitting && <LoaderIcon size={16} className="animate-spin" />}
