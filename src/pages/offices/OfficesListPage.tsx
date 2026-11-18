@@ -379,7 +379,7 @@ function FundingOverview() {
   return (
     <section className="mb-6">
       <h2 className="text-xs font-heading font-bold text-gray-400 uppercase tracking-widest mb-3">Office funding</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           colored
           label="Total office funding"

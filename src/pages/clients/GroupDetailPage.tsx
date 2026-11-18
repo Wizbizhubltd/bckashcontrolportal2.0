@@ -215,7 +215,7 @@ export function GroupDetailPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
         <StatCard icon={BanknoteIcon} tone="primary" label="Cumulative loans" value={formatMoney(summary.cumulativeLoanAmount, 0)} sublabel={`${count.format(summary.cumulativeLoanCount)} loan${summary.cumulativeLoanCount === 1 ? '' : 's'} across members`} />
         <StatCard icon={WalletIcon} tone="danger" label="Pending repayment" value={formatMoney(summary.pendingRepaymentAmount, 0)} sublabel="Still owed on running loans" />
         <StatCard icon={UsersIcon} tone="neutral" label="Total members" value={count.format(summary.totalMembers)} sublabel="In the group now" />

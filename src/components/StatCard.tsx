@@ -41,7 +41,7 @@ interface StatCardProps {
 export function StatCard({ label, value, sublabel, icon: Icon, tone = 'primary', to, loading, colored }: StatCardProps) {
   const surface = colored ? `border border-l-4 ${coloredCardClasses[tone]}` : 'bg-white border border-gray-100';
   const content = (
-    <div className={`group relative rounded-2xl shadow-card hover:shadow-elevated transition-shadow p-5 h-full flex flex-col justify-between ${surface}`}>
+    <div className={`group relative rounded-2xl shadow-card hover:shadow-elevated transition-shadow p-4 sm:p-5 h-full flex flex-col justify-between ${surface}`}>
       <div className="flex items-start justify-between">
         <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${toneClasses[tone]}`}>
           <Icon size={20} />
@@ -57,9 +57,13 @@ export function StatCard({ label, value, sublabel, icon: Icon, tone = 'primary',
         {loading ? (
           <div className="h-8 w-20 bg-gray-100 rounded animate-pulse" />
         ) : (
-          <p className="text-2xl font-heading font-bold text-gray-900 tabular-nums">{value}</p>
+          // On a phone the cards are two to a row: the figure scales with the screen and stays on one line,
+          // rather than a long amount (₦16,220,740,039) breaking mid-number.
+          <p className="whitespace-nowrap font-heading text-[clamp(0.95rem,4.2vw,1.5rem)] font-bold text-gray-900 tabular-nums sm:text-2xl">
+            {typeof value === 'number' ? value.toLocaleString() : value}
+          </p>
         )}
-        <p className="text-sm text-gray-500 mt-1">{label}</p>
+        <p className="text-xs text-gray-500 mt-1 sm:text-sm">{label}</p>
         {sublabel && <p className="text-xs text-gray-400 mt-0.5">{sublabel}</p>}
       </div>
     </div>

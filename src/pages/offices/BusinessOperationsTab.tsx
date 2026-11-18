@@ -321,7 +321,7 @@ export function BusinessOperationsTab({ officeId, officeActive }: { officeId: nu
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard colored label="Available for new loans" value={formatMoney(ops.available)} sublabel="Balance less loans already approved" icon={WalletIcon} tone={ops.available > 0 ? 'success' : 'danger'} />
         <StatCard colored label="Balance" value={formatMoney(ops.balance)} sublabel="Acknowledged funding less loans disbursed" icon={LandmarkIcon} tone="primary" />
         <StatCard colored label="Committed" value={formatMoney(ops.committed)} sublabel="Approved, awaiting disbursement" icon={ClockIcon} tone="info" />

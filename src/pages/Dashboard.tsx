@@ -59,7 +59,7 @@ export function Dashboard() {
       <section>
         <h3 className="text-xs font-heading font-bold text-gray-400 uppercase tracking-widest mb-3">Loan Portfolio</h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-3">
           <StatCard label="Outstanding Loans" value={summary?.outstandingLoansCount ?? 0} icon={LandmarkIcon} tone="primary" to="/loans?status=Disbursed" loading={loading} />
           <StatCard
             label="Disbursements (this month)"
@@ -81,7 +81,7 @@ export function Dashboard() {
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
           <StatCard colored label="Total Requested" value={formatMoney(portfolio?.requestedAmount ?? 0, 0)} sublabel={loansLabel(portfolio?.requestedCount)} icon={FileTextIcon} tone="info" to="/loans" loading={loading} />
           <StatCard colored label="Total Approved" value={formatMoney(portfolio?.approvedAmount ?? 0, 0)} sublabel={loansLabel(portfolio?.approvedCount)} icon={BadgeCheckIcon} tone="primary" loading={loading} />
           <StatCard colored label="Total Rejected" value={formatMoney(portfolio?.rejectedAmount ?? 0, 0)} sublabel={loansLabel(portfolio?.rejectedCount)} icon={XCircleIcon} tone="neutral" loading={loading} />
@@ -112,7 +112,7 @@ export function Dashboard() {
 
       <section>
         <h3 className="text-xs font-heading font-bold text-gray-400 uppercase tracking-widest mb-3">Network</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard label="Offices" value={summary?.officesCount ?? 0} sublabel={summary ? `${summary.activeOfficesCount} active` : undefined} icon={Building2Icon} tone="primary" to="/offices" loading={loading} />
           <StatCard label="Staff" value={summary?.staffCount ?? 0} icon={UsersIcon} tone="info" to="/staff" loading={loading} />
           <StatCard label="Clients" value={summary?.clientsCount ?? 0} sublabel={summary ? `${summary.activeClientsCount} active` : undefined} icon={ContactIcon} tone="accent" to="/clients" loading={loading} />
