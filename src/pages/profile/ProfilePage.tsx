@@ -256,16 +256,16 @@ function ChangePasswordCard() {
       </div>
       <label className="block space-y-1">
         <span className="block text-xs font-medium text-gray-600">Current password</span>
-        <input type={type} autoComplete="current-password" className={inputClass} value={current} onChange={(e) => setCurrent(e.target.value)} />
+        <input autoCapitalize="none" autoCorrect="off" spellCheck={false} type={type} autoComplete="current-password" className={inputClass} value={current} onChange={(e) => setCurrent(e.target.value)} />
       </label>
       <label className="block space-y-1">
         <span className="block text-xs font-medium text-gray-600">New password</span>
-        <input type={type} autoComplete="new-password" className={inputClass} value={next} onChange={(e) => setNext(e.target.value)} />
+        <input autoCapitalize="none" autoCorrect="off" spellCheck={false} type={type} autoComplete="new-password" className={inputClass} value={next} onChange={(e) => setNext(e.target.value)} />
         <span className="block text-xs text-gray-400">At least {MIN_PASSWORD_LENGTH} characters.</span>
       </label>
       <label className="block space-y-1">
         <span className="block text-xs font-medium text-gray-600">Confirm new password</span>
-        <input type={type} autoComplete="new-password" className={inputClass} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        <input autoCapitalize="none" autoCorrect="off" spellCheck={false} type={type} autoComplete="new-password" className={inputClass} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
       </label>
       <div className="flex items-center justify-between gap-3">
         <button type="button" onClick={() => setShow((s) => !s)} className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary">

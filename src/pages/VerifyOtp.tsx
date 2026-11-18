@@ -52,7 +52,7 @@ export function VerifyOtp() {
     try {
       await resendOtp();
       setCode('');
-      setNotice('A new code has been sent. Codes sent earlier will no longer work.');
+      setNotice('A new code has been sent. If the earlier code arrives first, you can use that one too.');
       setResendCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (resendError) {
       setError(resendError instanceof Error ? resendError.message : 'Could not resend the code. Please try again.');
@@ -125,7 +125,7 @@ export function VerifyOtp() {
           </button>
         )}
       </p>
-      <p className="mt-2 text-center text-xs text-gray-400">The code expires in 5 minutes.</p>
+      <p className="mt-2 text-center text-xs text-gray-400">The code expires in 10 minutes.</p>
 
       <Link
         to="/login"

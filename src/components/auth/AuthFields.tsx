@@ -22,7 +22,7 @@ export function AuthTextInput({ id, label, icon: Icon, labelAction, className = 
       </div>
       <div className="relative">
         <Icon size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input id={id} className={`${INPUT_CLASS} pr-4 ${className}`} {...inputProps} />
+        <input autoCapitalize="none" autoCorrect="off" spellCheck={false} id={id} className={`${INPUT_CLASS} pr-4 ${className}`} {...inputProps} />
       </div>
     </div>
   );
@@ -48,7 +48,7 @@ export function AuthPasswordInput({ id, label, labelAction, ...inputProps }: Aut
       </div>
       <div className="relative">
         <LockKeyholeIcon size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input id={id} type={visible ? 'text' : 'password'} className={`${INPUT_CLASS} pr-12`} {...inputProps} />
+        <input autoCapitalize="none" autoCorrect="off" spellCheck={false} id={id} type={visible ? 'text' : 'password'} className={`${INPUT_CLASS} pr-12`} {...inputProps} />
         <button
           type="button"
           onClick={() => setVisible((current) => !current)}

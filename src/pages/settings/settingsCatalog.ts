@@ -225,6 +225,20 @@ export const SETTINGS_TABS: SettingsTab[] = [
     description: 'Who can do what, and how staff sign in.',
     groups: [
       {
+        title: 'Failed sign-in lockout',
+        description: 'Whether staff are temporarily locked out after repeatedly entering the wrong password — in both portals, for signing in and for "Forgot password".',
+        enforced: true,
+        fields: [
+          {
+            key: 'login_lockout_enabled',
+            label: 'Lock accounts after failed sign-ins',
+            help: 'When on, an account is locked for 2 minutes after 5 wrong passwords in 2 minutes, and an internet address after 50 failed sign-ins (for example someone guessing many passwords). Staff see “Too many failed attempts — try again in N minutes”. When off, nobody is ever locked out, however many times they get the password wrong. Off by default.',
+            type: 'toggle',
+            defaultValue: '0',
+          },
+        ],
+      },
+      {
         title: 'Sign-in protection',
         description: 'A reCAPTCHA check on the sign-in page to stop automated password guessing.',
         fields: [

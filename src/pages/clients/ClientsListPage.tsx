@@ -197,7 +197,7 @@ export function ClientsListPage() {
         </div>
       </div>
 
-      <div role="tablist" className="flex border-b border-gray-200 mb-4">
+      <div role="tablist" className="flex overflow-x-auto border-b border-gray-200 mb-4">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -217,13 +217,13 @@ export function ClientsListPage() {
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <div className="bg-white rounded-xl border border-gray-100 p-4 grid grid-cols-1 sm:grid-cols-4 gap-3 flex-1 min-w-[280px]">
+            <div className="bg-white rounded-xl border border-gray-100 p-4 grid grid-cols-1 sm:grid-cols-4 gap-3 flex-1 min-w-0 basis-full sm:basis-auto">
               <div className="relative">
                 <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name or BVN"
+                  placeholder="Search by name, account no., phone or BVN"
                   className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                 />
               </div>
@@ -267,7 +267,55 @@ export function ClientsListPage() {
           )}
 
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <table className="w-full text-sm">
+            {/* Phones: one tappable card per client — the seven-column table doesn't fit. */}
+            <ul className="divide-y divide-gray-100 md:hidden">
+              {loading ? (
+                <li className="px-4 py-6 text-center text-sm text-gray-400">Loading…</li>
+              ) : items.length === 0 ? (
+                <li className="px-4 py-6 text-center text-sm text-gray-400">No clients found.</li>
+              ) : (
+                items.map((item) => (
+                  <li
+                    key={item.id}
+                    onClick={() => (bulk.selecting ? bulk.toggle(item.id) : navigate(`/clients/${item.id}`))}
+                    className={`flex cursor-pointer gap-3 px-4 py-3 ${bulk.selected.has(item.id) ? 'bg-primary/5' : 'active:bg-gray-50'}`}
+                  >
+                    {bulk.selecting && (
+                      <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+                        <BulkCheckbox label={`Select ${clientName(item)}`} checked={bulk.selected.has(item.id)} onChange={() => bulk.toggle(item.id)} />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="min-w-0 font-medium text-gray-900">{clientName(item)}</p>
+                        <StatusBadge status={item.status as StatusType} />
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        <span className="font-medium text-gray-700">{item.accountNo ?? '—'}</span>
+                        {item.mobile ? ` · ${item.mobile}` : ''}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-gray-400">
+                        {officeName(item.officeId)}
+                        {item.groupName ? ` · ${item.groupName}` : ''}
+                      </p>
+                      {item.isHighRisk && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void openReview(item);
+                          }}
+                          className="mt-2 inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700"
+                        >
+                          <ShieldAlertIcon size={13} /> High risk — review
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                ))
+              )}
+            </ul>
+
+            <table className="hidden w-full text-sm md:table">
               <thead className="bg-gray-50 text-left text-gray-500">
                 <tr>
                   {bulk.selecting && (
