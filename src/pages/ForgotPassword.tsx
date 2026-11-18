@@ -94,7 +94,7 @@ export function ForgotPassword() {
       setChallengeToken(result.challengeToken);
       setCode('');
       setCooldown(RESEND_COOLDOWN_SECONDS);
-      setNotice('A new code is on its way. Codes sent earlier will no longer work.');
+      setNotice('A new code is on its way. If the earlier code arrives first, you can use that one too.');
     } catch (resendError) {
       setError(errorMessage(resendError));
     } finally {
@@ -221,7 +221,7 @@ export function ForgotPassword() {
               </div>
 
               <div>
-                <AuthPasswordInput
+                <AuthPasswordInput autoCapitalize="none" autoCorrect="off" spellCheck={false}
                   id="new-password"
                   label="New password"
                   placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
@@ -249,7 +249,7 @@ export function ForgotPassword() {
               </div>
 
               <div>
-                <AuthPasswordInput
+                <AuthPasswordInput autoCapitalize="none" autoCorrect="off" spellCheck={false}
                   id="confirm-password"
                   label="Confirm new password"
                   placeholder="Re-enter your new password"

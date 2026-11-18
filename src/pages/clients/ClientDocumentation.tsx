@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { CheckCircle2Icon, ScanFaceIcon, ShieldCheckIcon, XCircleIcon } from 'lucide-react';
 import { clientsApi, type ClientBiometrics, type FaceCapture } from '../../api/clientsApi';
-import { FaceCaptureModal } from '../../components/FaceCaptureModal';
+import { FaceCaptureModal } from '../../components/LazyFaceCaptureModal';
 import { PassportPhoto } from '../../components/PassportPhoto';
 import { PassportPhotoUploadButton } from '../../components/PassportPhotoUploadButton';
 import { formatDate } from '../../utils/format';

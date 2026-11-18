@@ -8,7 +8,7 @@ import { useLoad } from '../../hooks/useLoad';
 import { formatMoney } from '../../utils/money';
 import { formatDate, humanize } from '../../utils/format';
 import { disbursementModeLabel, payInto } from '../../utils/disbursement';
-import { FaceCaptureModal } from '../../components/FaceCaptureModal';
+import { FaceCaptureModal } from '../../components/LazyFaceCaptureModal';
 import { LoanSummaryCards } from './LoanSummaryCards';
 
 type SectionKey = 'profile' | 'schedule' | 'repayments' | 'charges';

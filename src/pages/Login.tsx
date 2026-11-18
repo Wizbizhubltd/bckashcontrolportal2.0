@@ -83,7 +83,7 @@ export function Login() {
           required
         />
 
-        <AuthPasswordInput
+        <AuthPasswordInput autoCapitalize="none" autoCorrect="off" spellCheck={false}
           id="password"
           label="Password"
           placeholder="Enter your password"
