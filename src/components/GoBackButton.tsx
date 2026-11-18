@@ -22,7 +22,7 @@ export function GoBackButton() {
   };
 
   return (
-    <button type="button" onClick={goBack} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary mb-4">
+    <button type="button" onClick={goBack} className="-ml-2 mb-3 inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2 text-sm text-gray-500 hover:text-primary">
       <ArrowLeftIcon size={14} />
       Go Back
     </button>
